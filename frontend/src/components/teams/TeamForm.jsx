@@ -22,17 +22,6 @@ const TeamForm = () => {
         }
     };
 
-    // Check if user is admin
-    if (user && user.role !== 'admin') {
-        return (
-            <div className="alert alert-warning">
-                <h4>Admin Access Required</h4>
-                <p>You need admin privileges to create a new team.</p>
-                <Link to="/teams" className="btn btn-primary">Back to Teams</Link>
-            </div>
-        );
-    }
-
     return (
         <div className="team-form">
             <h2>Create New Team</h2>

@@ -4,6 +4,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+// Import Swagger
+const { swaggerUi, swaggerDocs } = require('./swagger');
+
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
@@ -18,6 +21,9 @@ const PORT = process.env.PORT || 4000;
 app.use(express.json());
 app.use(cors());
 
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -27,7 +33,7 @@ app.use('/api/github', githubRoutes);
 
 // Default route
 app.get('/', (req, res) => {
-    res.send('API is running');
+    res.send('API is running. Visit <a href="/api-docs">API Documentation</a>');
 });
 
 // Connect to MongoDB and start server
@@ -38,6 +44,7 @@ const startApp = async () => {
 
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
+            console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
         });
     } catch (error) {
         console.error('Failed to start the application:', error);

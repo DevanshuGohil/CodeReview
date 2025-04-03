@@ -1,8 +1,9 @@
 // components/projects/ProjectForm.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import TeamSelector from '../teams/TeamSelector';
+import { useAuth } from '../../context/AuthContext';
 
 const ProjectForm = () => {
     const [name, setName] = useState('');
@@ -14,6 +15,7 @@ const ProjectForm = () => {
     const [githubRepo, setGithubRepo] = useState('');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchTeams = async () => {

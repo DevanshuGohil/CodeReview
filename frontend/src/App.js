@@ -1,10 +1,11 @@
 // App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import Profile from './components/auth/Profile';
 import Dashboard from './components/Dashboard';
 import TeamList from './components/teams/TeamList';
 import TeamForm from './components/teams/TeamForm';
@@ -34,6 +35,21 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Public route component - redirects to dashboard if user is already logged in
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return children;
+};
+
 // Admin route component
 const AdminRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -42,8 +58,19 @@ const AdminRoute = ({ children }) => {
     return <div>Loading...</div>;
   }
 
-  if (!isAuthenticated || user.role !== 'admin') {
-    return <Navigate to="/dashboard" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user.role !== 'admin') {
+    // Show access denied message instead of redirecting
+    return (
+      <div className="alert alert-warning">
+        <h4>Admin Access Required</h4>
+        <p>You need admin privileges to access this page.</p>
+        <Link to="/projects" className="btn btn-primary">Back to Projects</Link>
+      </div>
+    );
   }
 
   return children;
@@ -58,13 +85,27 @@ function App() {
           <div className="container mt-4">
             <Routes>
               {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
+              <Route path="/register" element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              } />
 
               {/* Protected routes */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
 
@@ -75,9 +116,9 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/teams/new" element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <TeamForm />
-                </ProtectedRoute>
+                </AdminRoute>
               } />
               <Route path="/teams/:id" element={
                 <ProtectedRoute>
@@ -123,6 +164,11 @@ function App() {
               <Route path="/" element={
                 <Navigate to="/dashboard" replace />
               } />
+
+              {/* Catch-all route - redirect to login if not authenticated, dashboard if authenticated */}
+              <Route path="*" element={
+                <AuthRedirect />
+              } />
             </Routes>
           </div>
         </div>
@@ -130,5 +176,11 @@ function App() {
     </AuthProvider>
   );
 }
+
+// Auth redirect component - decides where to redirect based on auth status
+const AuthRedirect = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
+};
 
 export default App;
