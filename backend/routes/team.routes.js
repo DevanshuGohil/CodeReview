@@ -4,6 +4,8 @@ const router = express.Router();
 const teamController = require('../controllers/team.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const adminMiddleware = require('../middlewares/admin.middleware');
+const managerMiddleware = require('../middlewares/manager.middleware');
+const resourceAccessMiddleware = require('../middlewares/resource-access.middleware');
 
 /**
  * @swagger
@@ -57,7 +59,7 @@ router.use(authMiddleware);
  * @swagger
  * /api/teams:
  *   post:
- *     summary: Create a new team (Admin only)
+ *     summary: Create a new team (Manager only)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -88,23 +90,23 @@ router.use(authMiddleware);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       500:
  *         description: Server error
  */
-router.post('/', adminMiddleware, teamController.createTeam);
+router.post('/', managerMiddleware, teamController.createTeam);
 
 /**
  * @swagger
  * /api/teams:
  *   get:
- *     summary: Get all teams
+ *     summary: Get all teams (Managers see all, Users see only teams they belong to)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all teams
+ *         description: List of teams
  *         content:
  *           application/json:
  *             schema:
@@ -122,7 +124,7 @@ router.get('/', teamController.getAllTeams);
  * @swagger
  * /api/teams/{id}:
  *   get:
- *     summary: Get team by ID
+ *     summary: Get team by ID (Managers see all, Users see only teams they belong to)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -142,18 +144,20 @@ router.get('/', teamController.getAllTeams);
  *               $ref: '#/components/schemas/Team'
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: Team not found
  *       500:
  *         description: Server error
  */
-router.get('/:id', teamController.getTeamById);
+router.get('/:id', resourceAccessMiddleware.team, teamController.getTeamById);
 
 /**
  * @swagger
  * /api/teams/{id}:
  *   put:
- *     summary: Update team by ID (Admin only)
+ *     summary: Update team by ID (Manager only)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -187,19 +191,19 @@ router.get('/:id', teamController.getTeamById);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Team not found
  *       500:
  *         description: Server error
  */
-router.put('/:id', adminMiddleware, teamController.updateTeam);
+router.put('/:id', managerMiddleware, teamController.updateTeam);
 
 /**
  * @swagger
  * /api/teams/{id}:
  *   delete:
- *     summary: Delete team by ID (Admin only)
+ *     summary: Delete team by ID (Manager only)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -224,19 +228,19 @@ router.put('/:id', adminMiddleware, teamController.updateTeam);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Team not found
  *       500:
  *         description: Server error
  */
-router.delete('/:id', adminMiddleware, teamController.deleteTeam);
+router.delete('/:id', managerMiddleware, teamController.deleteTeam);
 
 /**
  * @swagger
  * /api/teams/{id}/members:
  *   post:
- *     summary: Add member to team (Admin only)
+ *     summary: Add member to team (Manager only)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -258,12 +262,12 @@ router.delete('/:id', adminMiddleware, teamController.deleteTeam);
  *             properties:
  *               userId:
  *                 type: string
- *                 description: User ID to add to the team
+ *                 example: 60d21b4667d0d8992e610c85
  *               role:
  *                 type: string
  *                 enum: [member, leader]
  *                 default: member
- *                 description: User's role in the team
+ *                 example: member
  *     responses:
  *       200:
  *         description: Member added successfully
@@ -274,19 +278,19 @@ router.delete('/:id', adminMiddleware, teamController.deleteTeam);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Team or user not found
  *       500:
  *         description: Server error
  */
-router.post('/:id/members', adminMiddleware, teamController.addMember);
+router.post('/:id/members', managerMiddleware, teamController.addMember);
 
 /**
  * @swagger
  * /api/teams/{id}/members/{userId}:
  *   delete:
- *     summary: Remove member from team (Admin only)
+ *     summary: Remove member from team (Manager only)
  *     tags: [Teams]
  *     security:
  *       - bearerAuth: []
@@ -302,7 +306,7 @@ router.post('/:id/members', adminMiddleware, teamController.addMember);
  *         schema:
  *           type: string
  *         required: true
- *         description: User ID to remove from the team
+ *         description: User ID
  *     responses:
  *       200:
  *         description: Member removed successfully
@@ -313,12 +317,12 @@ router.post('/:id/members', adminMiddleware, teamController.addMember);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Team or user not found
  *       500:
  *         description: Server error
  */
-router.delete('/:id/members/:userId', adminMiddleware, teamController.removeMember);
+router.delete('/:id/members/:userId', managerMiddleware, teamController.removeMember);
 
 module.exports = router;

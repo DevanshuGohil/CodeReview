@@ -1,0 +1,11 @@
+firstName,lastName,username,email,role
+John,Doe,johndoe,john.doe@example.com,admin
+Jane,Smith,jsmith,jane.smith@example.com,manager
+Bob,Johnson,bjohnson,bob.johnson@example.com,developer
+Sarah,Williams,swilliams,sarah.williams@example.com,developer
+Michael,Brown,mbrown,michael.brown@example.com,manager
+David,Miller,dmiller,david.miller@example.com,developer
+Jennifer,Taylor,jtaylor,jennifer.taylor@example.com,manager
+James,Anderson,janderson,james.anderson@example.com,developer
+Maria,Wilson,mwilson,maria.wilson@example.com,developer
+Robert,Martinez,rmartinez,robert.martinez@example.com,admin 

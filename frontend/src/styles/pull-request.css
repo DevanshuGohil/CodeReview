@@ -5,64 +5,36 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-.pr-details {
-    padding: 20px;
-    border-bottom: 1px solid #e1e4e8;
-    background-color: #f6f8fa;
-}
-
-.pr-meta {
-    display: flex;
-    justify-content: space-between;
-    margin: 15px 0;
-}
-
-.pr-author {
-    display: flex;
-    align-items: center;
-}
-
-.pr-author img {
-    border-radius: 50%;
-    margin-right: 10px;
-}
-
-.pr-stats {
-    display: flex;
-    gap: 15px;
-}
-
-.pr-state {
-    padding: 5px 10px;
-    border-radius: 3px;
-    color: white;
-    font-weight: bold;
-}
-
 .pr-content {
     display: flex;
     height: calc(100vh - 200px);
     overflow: hidden;
+    background-color: #121212;
+    margin-bottom: 30px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .sidebar {
-    width: 300px;
-    border-right: 1px solid #e1e4e8;
+    width: 25%;
+    min-width: 250px;
+    max-width: 350px;
     overflow-y: auto;
-    background-color: #f6f8fa;
+    background-color: rgba(18, 18, 18, 0.9);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .main-content {
     flex: 1;
     overflow: auto;
-    padding: 20px;
-    background-color: #fff;
+    padding: 0;
+    background-color: #121212;
 }
 
 /* File Changes List Styling */
 .file-changes-list {
     padding: 0;
-    background: #f6f8fa;
+    background-color: transparent;
     height: 100%;
 }
 
@@ -70,7 +42,8 @@
     padding: 12px 16px;
     margin: 0;
     font-size: 16px;
-    border-bottom: 1px solid #e1e4e8;
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .file-search {
@@ -80,7 +53,7 @@
 
 .file-list {
     overflow-y: auto;
-    /* max-height: calc(100vh - 300px); */
+    height: calc(100% - 45px);
 }
 
 .directory-group {
@@ -89,10 +62,10 @@
 
 .directory-name {
     padding: 8px 16px;
-    background-color: #e1e4e8;
+    background-color: rgba(255, 255, 255, 0.05);
     font-weight: bold;
     font-size: 13px;
-    color: #24292e;
+    color: white;
 }
 
 .files {
@@ -104,18 +77,19 @@
 .file-item {
     padding: 8px 16px;
     cursor: pointer;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
     font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .file-item:hover {
-    background-color: #e1e4e8;
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .file-item.selected {
-    background-color: #0366d6;
+    background-color: rgba(33, 150, 243, 0.3);
     color: white;
 }
 
@@ -136,23 +110,23 @@
 }
 
 .status-added {
-    background: #e6ffed;
-    color: #22863a;
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
 }
 
 .status-modified {
-    background: #fff5b1;
-    color: #735c0f;
+    background: rgba(241, 196, 15, 0.2);
+    color: #f1c40f;
 }
 
 .status-removed {
-    background: #ffeef0;
-    color: #cb2431;
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
 }
 
 .status-renamed {
-    background: #f1f8ff;
-    color: #0366d6;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
 }
 
 .file-name {
@@ -168,17 +142,17 @@
 }
 
 .additions {
-    color: #2cbe4e;
+    color: #2ecc71;
     margin-right: 5px;
 }
 
 .deletions {
-    color: #cb2431;
+    color: #e74c3c;
 }
 
 .binary-indicator {
     margin-left: 8px;
-    background-color: #6f42c1;
+    background-color: #9b59b6;
     color: white;
     border-radius: 50%;
     width: 16px;
@@ -192,21 +166,23 @@
 /* Diff Viewer Styling */
 .diff-viewer {
     padding: 20px;
-    background: #fff;
-    border: 1px solid #e1e4e8;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 6px;
     margin-bottom: 16px;
+    color: white;
 }
 
 .diff-viewer h3 {
     margin-top: 0;
     margin-bottom: 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     font-size: 18px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: white;
 }
 
 .file-stats {
@@ -243,66 +219,72 @@
 /* react-diff-view customization */
 .diff-container {
     margin-top: 16px;
-    border: 1px solid #e1e4e8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     overflow: hidden;
     font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 12px;
-    line-height: 1.5;
+    background-color: #1e1e1e;
 }
 
 .diff-view {
+    border-spacing: 0;
     width: 100%;
-    overflow-x: auto;
+    table-layout: fixed;
 }
 
 .diff-hunk {
-    margin-bottom: 0;
-    background-color: #f6f8fa;
+    background-color: #1e1e1e;
 }
 
 .diff-line {
-    display: flex;
-    min-height: 22px;
+    font-family: monospace;
+    line-height: 1.5;
 }
 
 .diff-gutter {
-    user-select: none;
-    padding: 0 12px;
-    min-width: 50px;
+    width: 50px;
+    padding: 0 10px;
     text-align: right;
-    color: rgba(27, 31, 35, 0.5);
-    background-color: #fafbfc;
-    border-right: 1px solid #e1e4e8;
+    cursor: pointer;
+    background-color: #121212;
+    color: rgba(255, 255, 255, 0.5);
+    user-select: none;
 }
 
 .diff-hunk-header {
-    padding: 4px 8px;
-    background-color: #f1f8ff;
-    color: #0366d6;
-    border-bottom: 1px solid #e1e4e8;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 10px;
 }
 
 .diff-code {
-    padding: 0 8px;
-    background-color: #fff;
-    white-space: pre;
+    padding: 0 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: white;
 }
 
 .diff-code-delete {
-    background-color: #ffeef0;
+    background-color: rgba(231, 76, 60, 0.15);
 }
 
 .diff-code-add {
-    background-color: #e6ffed;
+    background-color: rgba(46, 204, 113, 0.15);
 }
 
 .diff-gutter-delete {
-    background-color: #ffdce0;
+    background-color: rgba(231, 76, 60, 0.15);
 }
 
 .diff-gutter-add {
-    background-color: #cdffd8;
+    background-color: rgba(46, 204, 113, 0.15);
+}
+
+.diff-view table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
 }
 
 /* Loading and Error states */
@@ -329,13 +311,15 @@
 
     .sidebar {
         width: 100%;
-        max-height: 400px;
+        max-width: 100%;
+        height: 300px;
         border-right: none;
-        border-bottom: 1px solid #e1e4e8;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     .main-content {
-        padding: 10px;
+        width: 100%;
+        height: calc(100vh - 500px);
     }
 }
 

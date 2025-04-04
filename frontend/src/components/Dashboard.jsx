@@ -3,9 +3,29 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import {
+    Container,
+    Grid,
+    Paper,
+    Typography,
+    Box,
+    Button,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Divider,
+    Skeleton,
+    Alert,
+    Stack
+} from '@mui/material';
+import {
+    Add as AddIcon,
+    Group as GroupIcon
+} from '@mui/icons-material';
 
 const Dashboard = () => {
-    const { user } = useAuth();
+    const { currentUser: user } = useAuth();
     const [projects, setProjects] = useState([]);
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,182 +33,341 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!user) return; // Only fetch if user is authenticated
-
+            if (!user) return;
             try {
                 setLoading(true);
-                console.log('Fetching dashboard data for user:', user);
-
-                // Fetch projects and teams in parallel
                 const [projectsRes, teamsRes] = await Promise.all([
                     api.get('/projects'),
                     api.get('/teams')
                 ]);
-
-                console.log('Teams API response:', teamsRes.data);
                 setProjects(projectsRes.data);
                 setTeams(teamsRes.data);
                 setLoading(false);
             } catch (err) {
-                console.error('Error fetching dashboard data:', err);
                 setError(err.message || 'Failed to load dashboard data');
                 setLoading(false);
             }
         };
-
         fetchData();
     }, [user]);
 
-    if (!user) return <div>Please log in to view your dashboard.</div>;
-    if (loading) return <div>Loading dashboard...</div>;
-    if (error) return <div>Error: {error}</div>;
+    if (!user) return (
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Alert severity="info">Please log in to view your dashboard.</Alert>
+        </Container>
+    );
 
-    // Find teams where the user is a member
-    // This is a simpler approach with explicit logging for debugging
-    const userTeams = [];
+    if (loading) return (
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Skeleton variant="text" width="300px" height={60} sx={{ mb: 4 }} />
+            <Grid container spacing={3}>
+                <Grid item xs={12} md={8}>
+                    <Skeleton variant="rectangular" height={200} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <Skeleton variant="rectangular" height={200} />
+                </Grid>
+            </Grid>
+        </Container>
+    );
 
-    if (teams.length > 0) {
-        console.log('Filtering teams for user:', user._id);
+    if (error) return (
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Alert severity="error">Error: {error}</Alert>
+        </Container>
+    );
 
-        for (const team of teams) {
-            console.log(`Checking team "${team.name}" (${team._id})`, team);
-
-            // Check if team has members array
-            if (!team.members || !Array.isArray(team.members)) {
-                console.log(`- Team has no members array or it's not an array`);
-                continue;
-            }
-
-            let isUserInTeam = false;
-
-            // Check each member
-            for (const member of team.members) {
-                console.log('- Checking member:', member);
-
-                let memberId = null;
-
-                // Handle different formats of user reference
-                if (member.user && typeof member.user === 'object' && member.user._id) {
-                    memberId = member.user._id;
-                } else if (member.user && typeof member.user === 'string') {
-                    memberId = member.user;
-                }
-
-                console.log(`  - Member ID: ${memberId}, User ID: ${user._id}`);
-
-                if (memberId === user._id) {
-                    console.log(`  - MATCH FOUND: User is a member of team "${team.name}"`);
-                    isUserInTeam = true;
-                    break;
-                }
-            }
-
-            if (isUserInTeam) {
-                userTeams.push(team);
-            }
-        }
-    }
-
-    console.log('User teams:', userTeams);
+    const userTeams = teams.filter(team => {
+        if (!team.members || !Array.isArray(team.members)) return false;
+        return team.members.some(member => {
+            const memberId = member.user && typeof member.user === 'object'
+                ? member.user._id
+                : (typeof member.user === 'string' ? member.user : null);
+            return memberId === user._id;
+        });
+    });
 
     return (
-        <div className="dashboard">
-            <div className="row mb-4">
-                <div className="col-md-8">
-                    <h1>Welcome, {user?.firstName || user?.username}!</h1>
-                </div>
-                <div className="col-md-4 text-end">
-                    {user?.role === 'admin' && (
-                        <div className="btn-group">
-                            <Link to="/projects/new" className="btn btn-primary me-2">New Project</Link>
-                            <Link to="/teams/new" className="btn btn-success">New Team</Link>
-                        </div>
-                    )}
-                </div>
-            </div>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+            {/* Header Section */}
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h3" component="h1" sx={{
+                    fontWeight: 400,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    mb: 2
+                }}>
+                    Welcome, {user?.firstName || user?.username}!
+                </Typography>
 
-            <div className="row">
-                <div className="col-md-8">
-                    <div className="card mb-4">
-                        <div className="card-header d-flex justify-content-between align-items-center">
-                            <h3 className="mb-0">Recent Projects</h3>
-                            <Link to="/projects" className="btn btn-sm btn-outline-primary">View All</Link>
-                        </div>
-                        <div className="card-body">
+                {user?.role === 'manager' && (
+                    <Stack direction="row" spacing={2}>
+                        <Button
+                            component={Link}
+                            to="/projects/new"
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            sx={{
+                                borderRadius: 1,
+                                textTransform: 'none',
+                                px: 3
+                            }}
+                        >
+                            New Project
+                        </Button>
+                        <Button
+                            component={Link}
+                            to="/teams/new"
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<GroupIcon />}
+                            sx={{
+                                borderRadius: 1,
+                                textTransform: 'none',
+                                px: 3
+                            }}
+                        >
+                            New Team
+                        </Button>
+                    </Stack>
+                )}
+            </Box>
+
+            {/* Main Content */}
+            <Grid container spacing={3}>
+                {/* Projects Section */}
+                <Grid item xs={12} md={8}>
+                    <Paper
+                        elevation={2}
+                        sx={{
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            bgcolor: 'background.paper',
+                            border: 1,
+                            borderColor: 'divider'
+                        }}
+                    >
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: 'primary.dark',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant="h6" sx={{ color: 'primary.contrastText' }}>
+                                Recent Projects
+                            </Typography>
+                            <Button
+                                component={Link}
+                                to="/projects"
+                                sx={{
+                                    color: 'primary.contrastText',
+                                    textTransform: 'none',
+                                    '&:hover': {
+                                        color: 'primary.contrastText',
+                                        opacity: 0.9
+                                    }
+                                }}
+                            >
+                                View All →
+                            </Button>
+                        </Box>
+                        <Box sx={{ p: 3 }}>
                             {projects.length === 0 ? (
-                                <p>No projects found. {user?.role === 'admin' && <Link to="/projects/new">Create one</Link>}</p>
+                                <Box sx={{ textAlign: 'center' }}>
+                                    <Typography color="text.secondary">
+                                        No projects found.
+                                        {user?.role === 'manager' && (
+                                            <Button
+                                                component={Link}
+                                                to="/projects/new"
+                                                sx={{ ml: 1 }}
+                                            >
+                                                Create one
+                                            </Button>
+                                        )}
+                                    </Typography>
+                                </Box>
                             ) : (
-                                <div className="list-group">
-                                    {projects.slice(0, 5).map(project => (
-                                        <Link
-                                            key={project._id}
-                                            to={`/projects/${project._id}`}
-                                            className="list-group-item list-group-item-action"
-                                        >
-                                            <div className="d-flex w-100 justify-content-between">
-                                                <h5 className="mb-1">{project.name} <span className="badge bg-secondary">{project.key}</span></h5>
-                                                <small>{new Date(project.updatedAt).toLocaleDateString()}</small>
-                                            </div>
-                                            <p className="mb-1">{project.description}</p>
-                                            <small>Teams: {project.teams ? project.teams.length : 0}</small>
-                                        </Link>
+                                <List disablePadding>
+                                    {projects.slice(0, 5).map((project, index) => (
+                                        <React.Fragment key={project._id}>
+                                            {index > 0 && <Divider />}
+                                            <ListItem disablePadding>
+                                                <ListItemButton
+                                                    component={Link}
+                                                    to={`/projects/${project._id}`}
+                                                    sx={{
+                                                        py: 1.5,
+                                                        '&:hover': {
+                                                            bgcolor: 'action.hover'
+                                                        }
+                                                    }}
+                                                >
+                                                    <ListItemText
+                                                        primary={
+                                                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                                                                {project.name}
+                                                            </Typography>
+                                                        }
+                                                        secondary={project.description}
+                                                        secondaryTypographyProps={{
+                                                            sx: { color: 'text.secondary' }
+                                                        }}
+                                                    />
+                                                </ListItemButton>
+                                            </ListItem>
+                                        </React.Fragment>
                                     ))}
-                                </div>
+                                </List>
                             )}
-                        </div>
-                    </div>
-                </div>
+                        </Box>
+                    </Paper>
+                </Grid>
 
-                <div className="col-md-4">
-                    <div className="card mb-4">
-                        <div className="card-header d-flex justify-content-between align-items-center">
-                            <h3 className="mb-0">My Teams</h3>
-                            <Link to="/teams" className="btn btn-sm btn-outline-primary">View All</Link>
-                        </div>
-                        <div className="card-body">
-                            {/* Debug info */}
-                            <div className="mb-3 text-muted">
-                                <small>Total teams: {teams.length}, User teams: {userTeams.length}</small>
-                            </div>
+                {/* Right Column */}
+                <Grid item xs={12} md={4}>
+                    <Stack spacing={3}>
+                        {/* Teams Section */}
+                        <Paper
+                            elevation={2}
+                            sx={{
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                bgcolor: 'background.paper',
+                                border: 1,
+                                borderColor: 'divider'
+                            }}
+                        >
+                            <Box sx={{
+                                p: 2,
+                                bgcolor: 'secondary.dark',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <Typography variant="h6" sx={{ color: 'secondary.contrastText' }}>
+                                    My Teams
+                                </Typography>
+                                <Button
+                                    component={Link}
+                                    to="/teams"
+                                    sx={{
+                                        color: 'secondary.contrastText',
+                                        textTransform: 'none',
+                                        '&:hover': {
+                                            color: 'secondary.contrastText',
+                                            opacity: 0.9
+                                        }
+                                    }}
+                                >
+                                    View All →
+                                </Button>
+                            </Box>
+                            <Box sx={{ p: 3 }}>
+                                {teams.length === 0 ? (
+                                    <Box sx={{ textAlign: 'center' }}>
+                                        <Typography color="text.secondary">
+                                            No teams found.
+                                            {user?.role === 'manager' && (
+                                                <Button
+                                                    component={Link}
+                                                    to="/teams/new"
+                                                    sx={{ ml: 1 }}
+                                                >
+                                                    Create one
+                                                </Button>
+                                            )}
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <List disablePadding>
+                                        {userTeams.map((team, index) => (
+                                            <React.Fragment key={team._id}>
+                                                {index > 0 && <Divider />}
+                                                <ListItem disablePadding>
+                                                    <ListItemButton
+                                                        component={Link}
+                                                        to={`/teams/${team._id}`}
+                                                        sx={{
+                                                            py: 1.5,
+                                                            '&:hover': {
+                                                                bgcolor: 'action.hover'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <ListItemText
+                                                            primary={
+                                                                <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                                                                    {team.name}
+                                                                </Typography>
+                                                            }
+                                                        />
+                                                    </ListItemButton>
+                                                </ListItem>
+                                            </React.Fragment>
+                                        ))}
+                                    </List>
+                                )}
+                            </Box>
+                        </Paper>
 
-                            {teams.length === 0 ? (
-                                <p>No teams found. {user?.role === 'admin' && <Link to="/teams/new">Create one</Link>}</p>
-                            ) : userTeams.length === 0 ? (
-                                <p>You're not a member of any team. {user?.role === 'admin' && <Link to="/teams/new">Create one</Link>}</p>
-                            ) : (
-                                <div className="list-group">
-                                    {userTeams.map(team => (
-                                        <Link
-                                            key={team._id}
-                                            to={`/teams/${team._id}`}
-                                            className="list-group-item list-group-item-action"
-                                        >
-                                            {team.name}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="card">
-                        <div className="card-header">
-                            <h3 className="mb-0">Quick Links</h3>
-                        </div>
-                        <div className="card-body">
-                            <div className="list-group">
-                                <Link to="/projects" className="list-group-item list-group-item-action">
-                                    All Projects
-                                </Link>
-                                <Link to="/teams" className="list-group-item list-group-item-action">
-                                    All Teams
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                        {/* Quick Links Section */}
+                        <Paper
+                            elevation={2}
+                            sx={{
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                bgcolor: 'background.paper',
+                                border: 1,
+                                borderColor: 'divider'
+                            }}
+                        >
+                            <Box sx={{
+                                p: 2,
+                                bgcolor: 'background.default',
+                                borderBottom: 1,
+                                borderColor: 'divider'
+                            }}>
+                                <Typography variant="h6">Quick Links</Typography>
+                            </Box>
+                            <List disablePadding>
+                                <ListItem disablePadding>
+                                    <ListItemButton
+                                        component={Link}
+                                        to="/projects"
+                                        sx={{
+                                            py: 1.5,
+                                            '&:hover': {
+                                                bgcolor: 'action.hover'
+                                            }
+                                        }}
+                                    >
+                                        <ListItemText primary="All Projects" />
+                                    </ListItemButton>
+                                </ListItem>
+                                <Divider />
+                                <ListItem disablePadding>
+                                    <ListItemButton
+                                        component={Link}
+                                        to="/teams"
+                                        sx={{
+                                            py: 1.5,
+                                            '&:hover': {
+                                                bgcolor: 'action.hover'
+                                            }
+                                        }}
+                                    >
+                                        <ListItemText primary="All Teams" />
+                                    </ListItemButton>
+                                </ListItem>
+                            </List>
+                        </Paper>
+                    </Stack>
+                </Grid>
+            </Grid>
+        </Container>
     );
 };
 

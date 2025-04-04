@@ -18,7 +18,16 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf, encoding) => {
+        if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+            req.skipBodyParser = true;
+            return false;
+        }
+        return true;
+    }
+}));
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // Swagger Documentation

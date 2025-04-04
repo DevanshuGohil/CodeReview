@@ -23,11 +23,23 @@ exports.createTeam = async (req, res) => {
 
 exports.getAllTeams = async (req, res) => {
     try {
-        const teams = await Team.find()
+        // Managers and admins can see all teams
+        if (req.user.role === 'admin' || req.user.role === 'manager') {
+            const teams = await Team.find()
+                .populate('members.user', 'username email firstName lastName avatar')
+                .populate('createdBy', 'username email');
+
+            return res.json(teams);
+        }
+
+        // Regular users can only see teams they're a member of
+        const userTeams = await Team.find({
+            'members.user': req.user._id
+        })
             .populate('members.user', 'username email firstName lastName avatar')
             .populate('createdBy', 'username email');
 
-        res.json(teams);
+        res.json(userTeams);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

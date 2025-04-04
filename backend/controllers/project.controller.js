@@ -32,11 +32,31 @@ exports.createProject = async (req, res) => {
 
 exports.getAllProjects = async (req, res) => {
     try {
-        const projects = await Project.find()
+        // Admins and managers can see all projects
+        if (req.user.role === 'admin' || req.user.role === 'manager') {
+            const projects = await Project.find()
+                .populate('teams.team', 'name description')
+                .populate('createdBy', 'username email');
+
+            return res.json(projects);
+        }
+
+        // For regular users, only show projects where they're part of a team
+        // First, find all teams the user is a member of
+        const userTeams = await Team.find({
+            'members.user': req.user._id
+        }).select('_id');
+
+        const userTeamIds = userTeams.map(team => team._id);
+
+        // Then find projects that include those teams
+        const userProjects = await Project.find({
+            'teams.team': { $in: userTeamIds }
+        })
             .populate('teams.team', 'name description')
             .populate('createdBy', 'username email');
 
-        res.json(projects);
+        res.json(userProjects);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -98,7 +118,7 @@ exports.deleteProject = async (req, res) => {
 
 exports.addTeam = async (req, res) => {
     try {
-        const { teamId, accessLevel } = req.body;
+        const { team, accessLevel } = req.body;
 
         const project = await Project.findById(req.params.id);
 
@@ -106,22 +126,22 @@ exports.addTeam = async (req, res) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        const team = await Team.findById(teamId);
+        const teamDoc = await Team.findById(team);
 
-        if (!team) {
+        if (!teamDoc) {
             return res.status(404).json({ message: 'Team not found' });
         }
 
         // Check if team is already added to the project
         const existingTeam = project.teams.find(
-            t => t.team.toString() === teamId
+            t => t.team.toString() === team
         );
 
         if (existingTeam) {
             return res.status(400).json({ message: 'Team is already added to this project' });
         }
 
-        project.teams.push({ team: teamId, accessLevel: accessLevel || 'read' });
+        project.teams.push({ team, accessLevel: accessLevel || 'read' });
         project.updatedAt = Date.now();
 
         await project.save();
@@ -157,13 +177,16 @@ exports.removeTeam = async (req, res) => {
 
 exports.updateGithubRepo = async (req, res) => {
     try {
-        const { owner, repo, url } = req.body;
+        const { owner, repo } = req.body;
 
         const project = await Project.findById(req.params.id);
 
         if (!project) {
             return res.status(404).json({ message: 'Project not found' });
         }
+
+        // Create the URL from owner and repo
+        const url = `https://github.com/${owner}/${repo}`;
 
         project.githubRepo = {
             owner,

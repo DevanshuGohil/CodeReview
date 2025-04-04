@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
             password,
             firstName,
             lastName,
-            role: 'user' // Default role
+            role: 'developer' // Default role
         });
 
         // Hash password
@@ -63,10 +63,15 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { username, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({
+            $or: [
+                { username },
+                { email: username }
+            ]
+        });
 
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
@@ -96,7 +101,8 @@ exports.login = async (req, res) => {
 
         res.json({
             token,
-            user: userResponse
+            user: userResponse,
+            requirePasswordChange: user.requirePasswordChange
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -116,4 +122,42 @@ exports.logout = async (req, res) => {
     // JWT tokens are stateless, so we can't invalidate them on the server
     // The client should remove the token from local storage
     res.json({ message: 'Logged out successfully' });
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.id;
+
+        // Find user
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        // Reset the requirePasswordChange flag
+        if (user.requirePasswordChange) {
+            user.requirePasswordChange = false;
+        }
+
+        user.updatedAt = Date.now();
+
+        await user.save();
+
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };

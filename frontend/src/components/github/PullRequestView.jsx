@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../axiosConfig';
 import PullRequestDetails from './PullRequestDetails';
 import FileChangesList from './FileChangesList';
 import DiffViewer from './DiffViewer';
+import { Typography, Container, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import '../../styles/pull-request.css';
 
 const PullRequestView = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [prData, setPrData] = useState(null);
+    const [project, setProject] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
 
-    const { owner, repo, pullNumber } = useParams();
+    const { projectId, pullNumber } = useParams();
+    const navigate = useNavigate();
 
     useEffect(() => {
         let mounted = true;
@@ -20,13 +24,27 @@ const PullRequestView = () => {
         const fetchPullRequestData = async () => {
             try {
                 setLoading(true);
-                const url = `/github/${owner}/${repo}/pulls/${pullNumber}/complete`;
-                console.log('Fetching PR data from:', url);
 
-                const response = await api.get(url);
-                console.log('PR Response received:', response.status);
+                // First fetch the project to get GitHub repo details
+                const projectResponse = await api.get(`/projects/${projectId}`);
+                const projectData = projectResponse.data;
 
                 if (mounted) {
+                    setProject(projectData);
+
+                    if (!projectData.githubRepo || !projectData.githubRepo.owner || !projectData.githubRepo.repo) {
+                        throw new Error('This project has no GitHub repository configured');
+                    }
+
+                    const { owner, repo } = projectData.githubRepo;
+
+                    // Then fetch pull request data using owner and repo from project
+                    const url = `/github/${owner}/${repo}/pulls/${pullNumber}/complete`;
+                    console.log('Fetching PR data from:', url);
+
+                    const response = await api.get(url);
+                    console.log('PR Response received:', response.status);
+
                     console.log('Files count:', response.data.files?.length || 0);
 
                     // Process and sort files by name for easier navigation
@@ -64,34 +82,58 @@ const PullRequestView = () => {
         return () => {
             mounted = false;
         };
-    }, [owner, repo, pullNumber]);
+    }, [projectId, pullNumber]);
 
     const handleFileSelect = (file) => {
         setSelectedFile(file);
     };
 
     if (loading) return (
-        <div className="loading">
-            <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-            </div>
-            <p>Loading pull request data...</p>
-        </div>
+        <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+            <CircularProgress />
+            <Typography color="white" sx={{ mt: 2 }}>Loading pull request data...</Typography>
+        </Container>
     );
 
     if (error) return (
-        <div className="error alert alert-danger">
-            <h4>Error Loading Pull Request</h4>
-            <p>{error}</p>
-            <p>Repository: {owner}/{repo}, PR #{pullNumber}</p>
-        </div>
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+            <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate(`/projects/${projectId}/pulls`)}
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}
+            >
+                Back to Pull Requests
+            </Button>
+        </Container>
     );
 
-    if (!prData) return <div className="alert alert-warning">No data available for this pull request.</div>;
+    if (!prData || !project) return (
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Alert severity="warning">No data available for this pull request.</Alert>
+        </Container>
+    );
 
     return (
-        <div className="pull-request-view">
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography variant="h4" component="h1" color="white">
+                    Pull Request #{pullNumber}
+                </Typography>
+                <Button
+                    variant="outlined"
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => navigate(`/projects/${projectId}/pulls`)}
+                    sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}
+                >
+                    Back to Pull Requests
+                </Button>
+            </Box>
+
             <PullRequestDetails pullRequest={prData.pull_request} />
+
+            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
 
             <div className="pr-content">
                 <div className="sidebar">
@@ -106,7 +148,7 @@ const PullRequestView = () => {
                     <DiffViewer file={selectedFile} />
                 </div>
             </div>
-        </div>
+        </Container>
     );
 };
 

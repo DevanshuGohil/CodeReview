@@ -4,6 +4,22 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const adminMiddleware = require('../middlewares/admin.middleware');
+const multer = require('multer');
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: { fileSize: 1024 * 1024 * 5 }, // 5MB max file size
+    fileFilter: (req, file, cb) => {
+        // Accept only CSV files
+        if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only CSV files are allowed'));
+        }
+    }
+});
 
 /**
  * @swagger
@@ -37,8 +53,11 @@ const adminMiddleware = require('../middlewares/admin.middleware');
  *           description: User's last name
  *         role:
  *           type: string
- *           enum: [user, admin]
+ *           enum: [developer, manager, admin]
  *           description: User's role
+ *         requirePasswordChange:
+ *           type: boolean
+ *           description: Whether the user needs to change their password
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -148,14 +167,11 @@ router.get('/:id', userController.getUserById);
  *             properties:
  *               firstName:
  *                 type: string
- *                 example: John
  *               lastName:
  *                 type: string
- *                 example: Doe
  *               email:
  *                 type: string
  *                 format: email
- *                 example: john@example.com
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -251,7 +267,7 @@ router.put('/me/password', userController.changePassword);
  *                 format: email
  *               role:
  *                 type: string
- *                 enum: [user, admin]
+ *                 enum: [developer, manager, admin]
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -269,6 +285,52 @@ router.put('/me/password', userController.changePassword);
  *         description: Server error
  */
 router.put('/:id', adminMiddleware, userController.updateUser);
+
+/**
+ * @swagger
+ * /api/users/{id}/role:
+ *   put:
+ *     summary: Update user role (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [developer, manager, admin]
+ *                 required: true
+ *     responses:
+ *       200:
+ *         description: User role updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request - Invalid role
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin privileges required
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/:id/role', adminMiddleware, userController.updateUserRole);
 
 /**
  * @swagger
@@ -306,5 +368,63 @@ router.put('/:id', adminMiddleware, userController.updateUser);
  *         description: Server error
  */
 router.delete('/:id', adminMiddleware, userController.deleteUser);
+
+/**
+ * @swagger
+ * /api/users/import:
+ *   post:
+ *     summary: Import users from CSV (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               csvFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: CSV file with user data
+ *               adminPassword:
+ *                 type: string
+ *                 description: Default password for admin users
+ *               managerPassword:
+ *                 type: string
+ *                 description: Default password for manager users
+ *               developerPassword:
+ *                 type: string
+ *                 description: Default password for developer users
+ *     responses:
+ *       200:
+ *         description: Users imported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: integer
+ *                   description: Number of successfully imported users
+ *                 total:
+ *                   type: integer
+ *                   description: Total number of records in the CSV
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Error messages for failed imports
+ *       400:
+ *         description: Bad request - Missing file or passwords
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin privileges required
+ *       500:
+ *         description: Server error
+ */
+router.post('/import', adminMiddleware, upload.single('csvFile'), userController.importUsersFromCSV);
 
 module.exports = router;

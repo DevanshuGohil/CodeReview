@@ -7,11 +7,12 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     margin-bottom: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background-color: #121212;
 }
 
 /* Header */
 .custom-diff-viewer .diff-header {
-    background-color: #f6f8fa;
+    background-color: #121212;
     border-bottom: 1px solid #e1e4e8;
     padding: 10px 15px;
 }
@@ -38,6 +39,7 @@
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 12px;
+    background-color: #121212;
 }
 
 .custom-diff-viewer .changes {
@@ -58,7 +60,7 @@
 /* Controls */
 .custom-diff-viewer .diff-controls {
     padding: 8px 15px;
-    background-color: #f6f8fa;
+    background-color: #121212;
     border-bottom: 1px solid #e1e4e8;
     display: flex;
     justify-content: space-between;
@@ -122,7 +124,7 @@
 .custom-diff-viewer .diff-legend {
     display: flex;
     padding: 8px 15px;
-    background-color: #f6f8fa;
+    background-color: #121212;
     border-bottom: 1px solid #e1e4e8;
     font-size: 12px;
 }
@@ -143,11 +145,11 @@
 }
 
 .custom-diff-viewer .addition-color {
-    background-color: #e6ffec;
+    background-color: #15dd43;
 }
 
 .custom-diff-viewer .deletion-color {
-    background-color: #ffebe9;
+    background-color: #d02818;
 }
 
 /* Diff Content */
@@ -190,8 +192,8 @@
 
 /* Table Headers for Side-by-Side View */
 .custom-diff-viewer .diff-table.side-by-side thead th {
-    background-color: #f6f8fa;
-    color: #586069;
+    background-color: #121212;
+    color: #ddd;
     text-align: left;
     padding: 5px 10px;
     border-bottom: 1px solid #e1e4e8;

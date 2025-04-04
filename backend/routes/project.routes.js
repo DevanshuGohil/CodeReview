@@ -4,6 +4,8 @@ const router = express.Router();
 const projectController = require('../controllers/project.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const adminMiddleware = require('../middlewares/admin.middleware');
+const managerMiddleware = require('../middlewares/manager.middleware');
+const resourceAccessMiddleware = require('../middlewares/resource-access.middleware');
 
 /**
  * @swagger
@@ -72,7 +74,7 @@ router.use(authMiddleware);
  * @swagger
  * /api/projects:
  *   post:
- *     summary: Create a new project (Admin only)
+ *     summary: Create a new project (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -131,23 +133,23 @@ router.use(authMiddleware);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       500:
  *         description: Server error
  */
-router.post('/', adminMiddleware, projectController.createProject);
+router.post('/', managerMiddleware, projectController.createProject);
 
 /**
  * @swagger
  * /api/projects:
  *   get:
- *     summary: Get all projects
+ *     summary: Get all projects (Managers see all, Users see only projects they're part of)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all projects
+ *         description: List of projects
  *         content:
  *           application/json:
  *             schema:
@@ -165,7 +167,7 @@ router.get('/', projectController.getAllProjects);
  * @swagger
  * /api/projects/{id}:
  *   get:
- *     summary: Get project by ID
+ *     summary: Get project by ID (Managers see all, Users see only projects they're part of)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -185,18 +187,20 @@ router.get('/', projectController.getAllProjects);
  *               $ref: '#/components/schemas/Project'
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: Project not found
  *       500:
  *         description: Server error
  */
-router.get('/:id', projectController.getProjectById);
+router.get('/:id', resourceAccessMiddleware.project, projectController.getProjectById);
 
 /**
  * @swagger
  * /api/projects/{id}:
  *   put:
- *     summary: Update project by ID (Admin only)
+ *     summary: Update project by ID (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -230,19 +234,19 @@ router.get('/:id', projectController.getProjectById);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Project not found
  *       500:
  *         description: Server error
  */
-router.put('/:id', adminMiddleware, projectController.updateProject);
+router.put('/:id', managerMiddleware, projectController.updateProject);
 
 /**
  * @swagger
  * /api/projects/{id}:
  *   delete:
- *     summary: Delete project by ID (Admin only)
+ *     summary: Delete project by ID (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -267,19 +271,19 @@ router.put('/:id', adminMiddleware, projectController.updateProject);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Project not found
  *       500:
  *         description: Server error
  */
-router.delete('/:id', adminMiddleware, projectController.deleteProject);
+router.delete('/:id', managerMiddleware, projectController.deleteProject);
 
 /**
  * @swagger
  * /api/projects/{id}/teams:
  *   post:
- *     summary: Add team to project (Admin only)
+ *     summary: Add team to project (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -301,14 +305,15 @@ router.delete('/:id', adminMiddleware, projectController.deleteProject);
  *             properties:
  *               team:
  *                 type: string
- *                 description: Team ID
+ *                 example: 60d21b4667d0d8992e610c85
  *               accessLevel:
  *                 type: string
  *                 enum: [read, write, admin]
  *                 default: read
+ *                 example: read
  *     responses:
  *       200:
- *         description: Team added to project successfully
+ *         description: Team added successfully
  *         content:
  *           application/json:
  *             schema:
@@ -316,19 +321,19 @@ router.delete('/:id', adminMiddleware, projectController.deleteProject);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Project or team not found
  *       500:
  *         description: Server error
  */
-router.post('/:id/teams', adminMiddleware, projectController.addTeam);
+router.post('/:id/teams', managerMiddleware, projectController.addTeam);
 
 /**
  * @swagger
  * /api/projects/{id}/teams/{teamId}:
  *   delete:
- *     summary: Remove team from project (Admin only)
+ *     summary: Remove team from project (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -344,10 +349,10 @@ router.post('/:id/teams', adminMiddleware, projectController.addTeam);
  *         schema:
  *           type: string
  *         required: true
- *         description: Team ID to remove from the project
+ *         description: Team ID
  *     responses:
  *       200:
- *         description: Team removed from project successfully
+ *         description: Team removed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -355,19 +360,19 @@ router.post('/:id/teams', adminMiddleware, projectController.addTeam);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Project or team not found
  *       500:
  *         description: Server error
  */
-router.delete('/:id/teams/:teamId', adminMiddleware, projectController.removeTeam);
+router.delete('/:id/teams/:teamId', managerMiddleware, projectController.removeTeam);
 
 /**
  * @swagger
  * /api/projects/{id}/github:
  *   put:
- *     summary: Update GitHub repository information (Admin only)
+ *     summary: Update GitHub repository for project (Manager only)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -384,6 +389,9 @@ router.delete('/:id/teams/:teamId', adminMiddleware, projectController.removeTea
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - owner
+ *               - repo
  *             properties:
  *               owner:
  *                 type: string
@@ -391,12 +399,9 @@ router.delete('/:id/teams/:teamId', adminMiddleware, projectController.removeTea
  *               repo:
  *                 type: string
  *                 example: hello-world
- *               url:
- *                 type: string
- *                 example: https://github.com/octocat/hello-world
  *     responses:
  *       200:
- *         description: GitHub repository information updated successfully
+ *         description: GitHub repository updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -404,12 +409,12 @@ router.delete('/:id/teams/:teamId', adminMiddleware, projectController.removeTea
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Admin privileges required
+ *         description: Manager privileges required
  *       404:
  *         description: Project not found
  *       500:
  *         description: Server error
  */
-router.put('/:id/github', adminMiddleware, projectController.updateGithubRepo);
+router.put('/:id/github', managerMiddleware, projectController.updateGithubRepo);
 
 module.exports = router;
