@@ -1,19 +1,19 @@
 /* Custom Diff Viewer Styles */
 
 .custom-diff-viewer {
-    border: 1px solid #e1e4e8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     background-color: #121212;
 }
 
 /* Header */
 .custom-diff-viewer .diff-header {
     background-color: #121212;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     padding: 10px 15px;
 }
 
@@ -24,6 +24,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: white;
 }
 
 .custom-diff-viewer .diff-stats {
@@ -31,15 +32,17 @@
     justify-content: space-between;
     margin-top: 5px;
     font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .custom-diff-viewer .file-status {
     text-transform: capitalize;
-    /* background-color: #e1e4e8; */
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 12px;
-    background-color: #121212;
+    background-color: rgba(18, 18, 18, 0.9);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .custom-diff-viewer .changes {
@@ -48,12 +51,12 @@
 }
 
 .custom-diff-viewer .additions {
-    color: #22863a;
+    color: #2ecc71;
     font-weight: 600;
 }
 
 .custom-diff-viewer .deletions {
-    color: #cb2431;
+    color: #e74c3c;
     font-weight: 600;
 }
 
@@ -61,7 +64,7 @@
 .custom-diff-viewer .diff-controls {
     padding: 8px 15px;
     background-color: #121212;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -78,45 +81,47 @@
 }
 
 .custom-diff-viewer .view-mode-toggle {
-    background-color: #fafbfc;
-    border: 1px solid #e1e4e8;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 3px;
     padding: 4px 10px;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .custom-diff-viewer .view-mode-toggle:hover {
-    background-color: #f3f4f6;
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .custom-diff-viewer .view-mode-toggle.active {
-    background-color: #0366d6;
-    border-color: #0366d6;
+    background-color: rgba(33, 150, 243, 0.2);
+    border-color: rgba(33, 150, 243, 0.5);
     color: white;
 }
 
 .custom-diff-viewer .toggle-context,
 .custom-diff-viewer .toggle-hunk-headers {
-    background-color: #fafbfc;
-    border: 1px solid #e1e4e8;
+    background-color: rgba(18, 18, 18, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 3px;
     padding: 4px 10px;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .custom-diff-viewer .toggle-context:hover,
 .custom-diff-viewer .toggle-hunk-headers:hover {
-    background-color: #f3f4f6;
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .custom-diff-viewer .toggle-context.active,
 .custom-diff-viewer .toggle-hunk-headers.active {
-    background-color: #0366d6;
-    border-color: #0366d6;
+    background-color: rgba(33, 150, 243, 0.2);
+    border-color: rgba(33, 150, 243, 0.5);
     color: white;
 }
 
@@ -125,8 +130,9 @@
     display: flex;
     padding: 8px 15px;
     background-color: #121212;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .custom-diff-viewer .legend-item {
@@ -141,21 +147,21 @@
     height: 12px;
     margin-right: 6px;
     border-radius: 2px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .custom-diff-viewer .addition-color {
-    background-color: #15dd43;
+    background-color: rgba(46, 204, 113, 0.3);
 }
 
 .custom-diff-viewer .deletion-color {
-    background-color: #d02818;
+    background-color: rgba(231, 76, 60, 0.3);
 }
 
 /* Diff Content */
 .custom-diff-viewer .diff-body {
     overflow-x: auto;
-    background-color: #fff;
+    background-color: #121212;
     max-height: 1200px;
     overflow-y: auto;
     max-width: 100%;
@@ -170,7 +176,7 @@
 .custom-diff-viewer .diff-body.empty {
     padding: 20px;
     text-align: center;
-    color: #6c757d;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .custom-diff-viewer .diff-table {
@@ -179,24 +185,25 @@
     font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 12px;
     line-height: 1.5;
-    border: 1px solid #ddd;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: white;
 }
 
 .custom-diff-viewer .diff-table tr {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .diff-table td {
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Table Headers for Side-by-Side View */
 .custom-diff-viewer .diff-table.side-by-side thead th {
     background-color: #121212;
-    color: #ddd;
+    color: rgba(255, 255, 255, 0.8);
     text-align: left;
     padding: 5px 10px;
-    border-bottom: 1px solid #e1e4e8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     font-weight: 600;
     font-size: 11px;
 }
@@ -215,23 +222,23 @@
     user-select: none;
     text-align: right;
     padding: 0 10px;
-    color: #6a737d;
-    background-color: #f6f8fa;
-    border-right: 1px solid #ddd;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: #0a0a0a;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
     min-width: 50px;
     width: 50px;
 }
 
 .custom-diff-viewer .line-number.left {
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .line-number.right {
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .line-number.empty {
-    background-color: #fafbfc;
+    background-color: #0a0a0a;
 }
 
 /* Line Content */
@@ -240,7 +247,7 @@
     white-space: normal;
     position: relative;
     overflow: visible;
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .line-content pre {
@@ -252,45 +259,46 @@
     overflow-wrap: break-word;
     max-width: 100%;
     display: block;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .custom-diff-viewer .line-content.empty {
-    background-color: #fafafa;
+    background-color: #0f0f0f;
 }
 
 /* Line Types */
 .custom-diff-viewer .addition-line {
-    background-color: #e6ffec;
+    background-color: rgba(46, 204, 113, 0.1);
 }
 
 .custom-diff-viewer .addition-content {
-    color: #22863a;
-    background-color: #e6ffec;
+    color: #2ecc71;
+    background-color: rgba(46, 204, 113, 0.1);
 }
 
 .custom-diff-viewer .deletion-line {
-    background-color: #ffebe9;
+    background-color: rgba(231, 76, 60, 0.1);
 }
 
 .custom-diff-viewer .deletion-content {
-    color: #cb2431;
-    background-color: #ffebe9;
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
 }
 
 .custom-diff-viewer .change-line td {
-    border-top: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .hunk-header-line {
-    background-color: #f1f8ff;
-    border-top: 1px solid #e1e4e8;
-    border-bottom: 1px solid #e1e4e8;
+    background-color: rgba(52, 152, 219, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .hunk-header-content {
-    color: #0366d6;
-    background-color: #f1f8ff;
+    color: #3498db;
+    background-color: rgba(52, 152, 219, 0.05);
     font-weight: 500;
     font-size: 11px;
     padding: 2px 10px;
@@ -299,27 +307,28 @@
 .custom-diff-viewer .hunk-header-content pre {
     font-family: Consolas, Monaco, 'Courier New', monospace;
     opacity: 0.85;
+    color: #3498db;
 }
 
 /* Meta line styling */
 .custom-diff-viewer .meta-line {
-    color: #6a737d;
-    background-color: #f0f2f5;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.03);
     font-style: italic;
-    border-top: 1px dashed #ccc;
-    border-bottom: 1px dashed #ccc;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 .custom-diff-viewer .meta-content {
-    color: #6a737d;
-    background-color: #f0f2f5;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.03);
     font-style: italic;
     padding: 6px 10px;
     font-family: Consolas, Monaco, 'Courier New', monospace;
 }
 
 .custom-diff-viewer .meta-content pre {
-    color: #24292e;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 500;
 }
 
@@ -332,31 +341,37 @@
 }
 
 .custom-diff-viewer .diff-table.side-by-side tr {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .diff-table.side-by-side .line-content {
     width: 45%;
     min-width: 300px;
     max-width: 45%;
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-x: auto;
 }
 
 .custom-diff-viewer .diff-table.side-by-side .line-number {
     width: 5%;
     min-width: 50px;
-    border-right: 1px solid #ddd;
+    max-width: 70px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 10px;
+    text-align: right;
 }
 
-/* Center divider line for side-by-side view */
+/* Center divider for side-by-side view */
 .custom-diff-viewer .diff-table.side-by-side td:nth-child(2) {
-    border-right: 2px solid #ddd;
+    border-right: 2px solid rgba(255, 255, 255, 0.12);
 }
 
+/* Fix for line content to ensure it properly wraps */
 .custom-diff-viewer .diff-table.side-by-side .line-content pre {
     width: 100%;
     overflow-x: visible;
     text-overflow: ellipsis;
+    white-space: pre-wrap;
 }
 
 /* Responsive styles */
@@ -388,9 +403,9 @@
 
 /* Add vertical lines to unified view also */
 .custom-diff-viewer .diff-table.unified .line-content {
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-diff-viewer .diff-table.unified .line-number {
-    border-right: 1px solid #ddd;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }

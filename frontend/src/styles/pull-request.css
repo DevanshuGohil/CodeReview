@@ -379,11 +379,11 @@
 
 /* Improved Plain Text Diff component styling */
 .plain-text-diff {
-    border: 1px solid #e1e4e8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     margin-top: 16px;
     overflow: hidden;
-    background-color: #fafbfc;
+    background-color: #121212;
 }
 
 .plain-text-diff .diff-content {
@@ -403,7 +403,8 @@
     white-space: pre;
     padding: 0;
     min-height: 1.5em;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .plain-text-diff .line-number {
@@ -411,9 +412,9 @@
     padding: 0 10px;
     min-width: 40px;
     text-align: right;
-    background-color: rgba(0, 0, 0, 0.05);
-    color: #666;
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: #0a0a0a;
+    color: rgba(255, 255, 255, 0.5);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
     user-select: none;
 }
 
@@ -423,35 +424,36 @@
 }
 
 .plain-text-diff .addition-line {
-    background-color: #e6ffec;
+    background-color: rgba(46, 204, 113, 0.1);
 }
 
 .plain-text-diff .addition-line .line-content {
-    color: #22863a;
-    background-color: #e6ffec;
+    color: #2ecc71;
+    background-color: rgba(46, 204, 113, 0.1);
 }
 
 .plain-text-diff .deletion-line {
-    background-color: #ffebe9;
+    background-color: rgba(231, 76, 60, 0.1);
 }
 
 .plain-text-diff .deletion-line .line-content {
-    color: #cb2431;
-    background-color: #ffebe9;
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
 }
 
 .plain-text-diff .hunk-header-line {
-    background-color: #f1f8ff;
+    background-color: rgba(52, 152, 219, 0.05);
 }
 
 .plain-text-diff .hunk-header-line .line-content {
-    color: #0366d6;
-    background-color: #f1f8ff;
+    color: #3498db;
+    background-color: rgba(52, 152, 219, 0.05);
     font-weight: 600;
 }
 
 .plain-text-diff .meta-line .line-content {
-    color: #6a737d;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* Diff statistics and legend */
@@ -460,8 +462,9 @@
     justify-content: flex-start;
     align-items: center;
     padding: 8px 12px;
-    background-color: #f6f8fa;
-    border-bottom: 1px solid #e1e4e8;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .plain-text-diff .stats-label {
@@ -470,20 +473,21 @@
 }
 
 .plain-text-diff .additions-count {
-    color: #22863a;
+    color: #2ecc71;
     font-weight: 600;
 }
 
 .plain-text-diff .deletions-count {
-    color: #cb2431;
+    color: #e74c3c;
     font-weight: 600;
 }
 
 .plain-text-diff .diff-legend {
     display: flex;
     padding: 4px 12px;
-    background-color: #f6f8fa;
-    border-bottom: 1px solid #e1e4e8;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .plain-text-diff .legend-item {
@@ -498,38 +502,43 @@
     width: 12px;
     height: 12px;
     margin-right: 4px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .plain-text-diff .addition-sample {
-    background-color: #e6ffec;
+    background-color: rgba(46, 204, 113, 0.3);
 }
 
 .plain-text-diff .deletion-sample {
-    background-color: #ffebe9;
+    background-color: rgba(231, 76, 60, 0.3);
 }
 
 /* Critical overrides for react-diff-view to ensure diff displays correctly */
 .diff-view {
     display: block !important;
+    background-color: #121212 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 .diff-hunk {
     display: block !important;
+    background-color: #121212 !important;
 }
 
 .diff-line {
     display: flex !important;
     min-height: 22px !important;
     width: 100% !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .diff-code {
-    white-space: pre !important;
-    word-wrap: normal !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
     overflow-x: auto !important;
     width: 100% !important;
     flex: 1 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .diff-gutter {
@@ -539,21 +548,28 @@
     cursor: default !important;
     padding: 0 8px !important;
     flex-shrink: 0 !important;
+    background-color: #0a0a0a !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .diff-view table {
     border-collapse: separate !important;
     border-spacing: 0 !important;
     width: 100% !important;
+    background-color: #121212 !important;
 }
 
 /* Add a bit of styling to the view toggle button */
 .view-toggle button {
     transition: all 0.2s ease;
+    background-color: rgba(18, 18, 18, 0.9) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 .view-toggle button:hover {
-    background-color: #0366d6;
-    color: white;
-    border-color: #0366d6;
+    background-color: rgba(33, 150, 243, 0.2) !important;
+    color: white !important;
+    border-color: rgba(33, 150, 243, 0.5) !important;
 }
