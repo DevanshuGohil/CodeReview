@@ -66,7 +66,7 @@ const TeamDetail = () => {
                 setEditDescription(response.data.description || '');
                 setLoading(false);
             } catch (err) {
-                setError(err.message);
+                setError(err.response.data.message);
                 setLoading(false);
             }
         };
@@ -178,6 +178,16 @@ const TeamDetail = () => {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                </Alert>
+            )}
+            {successMessage && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                    {successMessage}
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 {isEditing ? (
                     <TextField
@@ -255,9 +265,6 @@ const TeamDetail = () => {
                     {team.description}
                 </Typography>
             )}
-
-            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-            {successMessage && <Alert severity="success" sx={{ mb: 3 }}>{successMessage}</Alert>}
 
             <Card variant="outlined" sx={{ mb: 4, bgcolor: 'background.paper' }}>
                 <CardHeader

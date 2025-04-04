@@ -90,13 +90,17 @@ const Dashboard = () => {
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
             {/* Header Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{
+                mb: 4,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
                 <Typography variant="h3" component="h1" sx={{
                     fontWeight: 400,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 2,
-                    mb: 2
+                    gap: 2
                 }}>
                     Welcome, {user?.firstName || user?.username}!
                 </Typography>
@@ -311,58 +315,6 @@ const Dashboard = () => {
                                     </List>
                                 )}
                             </Box>
-                        </Paper>
-
-                        {/* Quick Links Section */}
-                        <Paper
-                            elevation={2}
-                            sx={{
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                bgcolor: 'background.paper',
-                                border: 1,
-                                borderColor: 'divider'
-                            }}
-                        >
-                            <Box sx={{
-                                p: 2,
-                                bgcolor: 'background.default',
-                                borderBottom: 1,
-                                borderColor: 'divider'
-                            }}>
-                                <Typography variant="h6">Quick Links</Typography>
-                            </Box>
-                            <List disablePadding>
-                                <ListItem disablePadding>
-                                    <ListItemButton
-                                        component={Link}
-                                        to="/projects"
-                                        sx={{
-                                            py: 1.5,
-                                            '&:hover': {
-                                                bgcolor: 'action.hover'
-                                            }
-                                        }}
-                                    >
-                                        <ListItemText primary="All Projects" />
-                                    </ListItemButton>
-                                </ListItem>
-                                <Divider />
-                                <ListItem disablePadding>
-                                    <ListItemButton
-                                        component={Link}
-                                        to="/teams"
-                                        sx={{
-                                            py: 1.5,
-                                            '&:hover': {
-                                                bgcolor: 'action.hover'
-                                            }
-                                        }}
-                                    >
-                                        <ListItemText primary="All Teams" />
-                                    </ListItemButton>
-                                </ListItem>
-                            </List>
                         </Paper>
                     </Stack>
                 </Grid>

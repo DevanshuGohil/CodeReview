@@ -391,7 +391,7 @@ const ProjectDetail = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={teamData.team.members ? teamData.team.members.length : 0}
+                                                    label={teamData.team.members && Array.isArray(teamData.team.members) ? teamData.team.members.length : 0}
                                                     size="small"
                                                     color="primary"
                                                     variant="outlined"

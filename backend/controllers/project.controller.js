@@ -65,7 +65,14 @@ exports.getAllProjects = async (req, res) => {
 exports.getProjectById = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
-            .populate('teams.team', 'name description members')
+            .populate({
+                path: 'teams.team',
+                select: 'name description',
+                populate: {
+                    path: 'members.user',
+                    select: 'username email firstName lastName avatar'
+                }
+            })
             .populate('createdBy', 'username email');
 
         if (!project) {
@@ -146,7 +153,19 @@ exports.addTeam = async (req, res) => {
 
         await project.save();
 
-        res.json(project);
+        // Return fully populated project data
+        const populatedProject = await Project.findById(req.params.id)
+            .populate({
+                path: 'teams.team',
+                select: 'name description',
+                populate: {
+                    path: 'members.user',
+                    select: 'username email firstName lastName avatar'
+                }
+            })
+            .populate('createdBy', 'username email');
+
+        res.json(populatedProject);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -169,7 +188,19 @@ exports.removeTeam = async (req, res) => {
 
         await project.save();
 
-        res.json(project);
+        // Return fully populated project data
+        const populatedProject = await Project.findById(id)
+            .populate({
+                path: 'teams.team',
+                select: 'name description',
+                populate: {
+                    path: 'members.user',
+                    select: 'username email firstName lastName avatar'
+                }
+            })
+            .populate('createdBy', 'username email');
+
+        res.json(populatedProject);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

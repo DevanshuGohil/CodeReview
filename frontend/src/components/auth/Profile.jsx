@@ -2,9 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../axiosConfig';
+import {
+    Container,
+    Grid,
+    Paper,
+    Typography,
+    TextField,
+    Button,
+    Box,
+    Divider,
+    Alert,
+    CircularProgress,
+    InputAdornment,
+    IconButton
+} from '@mui/material';
+import {
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
+    Save as SaveIcon,
+    Key as KeyIcon
+} from '@mui/icons-material';
 
 const Profile = () => {
-    const { user, setUser } = useAuth();
+    const { currentUser, setUser } = useAuth();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
@@ -16,6 +36,11 @@ const Profile = () => {
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
+    });
+    const [showPassword, setShowPassword] = useState({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false
     });
     const [loading, setLoading] = useState(false);
     const [passwordLoading, setPasswordLoading] = useState(false);
@@ -38,15 +63,15 @@ const Profile = () => {
 
     // Load user data into form when component mounts
     useEffect(() => {
-        if (user) {
+        if (currentUser) {
             setFormData({
-                username: user.username || '',
-                email: user.email || '',
-                firstName: user.firstName || '',
-                lastName: user.lastName || ''
+                username: currentUser.username || '',
+                email: currentUser.email || '',
+                firstName: currentUser.firstName || '',
+                lastName: currentUser.lastName || ''
             });
         }
-    }, [user]);
+    }, [currentUser]);
 
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -77,6 +102,13 @@ const Profile = () => {
         setPasswordData({
             ...passwordData,
             [e.target.id]: e.target.value
+        });
+    };
+
+    const handleTogglePasswordVisibility = (field) => {
+        setShowPassword({
+            ...showPassword,
+            [field]: !showPassword[field]
         });
     };
 
@@ -185,152 +217,280 @@ const Profile = () => {
         }
     };
 
-    if (!user) return <div>Loading user data...</div>;
+    if (!currentUser) {
+        return (
+            <Container sx={{ py: 4, textAlign: 'center' }}>
+                <CircularProgress />
+                <Typography sx={{ mt: 2, color: 'white' }}>Loading user data...</Typography>
+            </Container>
+        );
+    }
 
     return (
-        <div className="row justify-content-center">
-            <div className="col-md-8">
-                <div className="card mb-4">
-                    <div className="card-header">
-                        <h2>Profile Settings</h2>
-                    </div>
-                    <div className="card-body">
-                        {error && <div className="alert alert-danger">{error}</div>}
-                        {success && <div className="alert alert-success">Profile updated successfully!</div>}
+        <Container maxWidth="md" sx={{ py: 4 }}>
+            <Grid container spacing={3}>
+                <Grid item xs={12}>
+                    <Paper
+                        elevation={0}
+                        variant="outlined"
+                        sx={{
+                            p: 3,
+                            mb: 3,
+                            bgcolor: 'rgba(18, 18, 18, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.12)'
+                        }}
+                    >
+                        <Typography variant="h5" component="h1" color="white" sx={{ mb: 3 }}>
+                            Profile Settings
+                        </Typography>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="form-group mb-3">
-                                <label htmlFor="username">Username</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    id="username"
-                                    value={formData.username}
-                                    disabled
-                                    readOnly
-                                />
-                                <small className="form-text text-muted">Username cannot be changed</small>
-                            </div>
+                        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+                        {success && <Alert severity="success" sx={{ mb: 3 }}>Profile updated successfully!</Alert>}
 
-                            <div className="row">
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="firstName">First Name</label>
-                                        <input
-                                            type="text"
-                                            className={`form-control ${nameErrors.firstName ? 'is-invalid' : ''}`}
-                                            id="firstName"
-                                            value={formData.firstName}
-                                            onChange={handleChange}
-                                        />
-                                        {nameErrors.firstName && (
-                                            <div className="invalid-feedback">{nameErrors.firstName}</div>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="lastName">Last Name</label>
-                                        <input
-                                            type="text"
-                                            className={`form-control ${nameErrors.lastName ? 'is-invalid' : ''}`}
-                                            id="lastName"
-                                            value={formData.lastName}
-                                            onChange={handleChange}
-                                        />
-                                        {nameErrors.lastName && (
-                                            <div className="invalid-feedback">{nameErrors.lastName}</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        <Box component="form" onSubmit={handleSubmit}>
+                            <TextField
+                                id="username"
+                                label="Username"
+                                variant="outlined"
+                                fullWidth
+                                margin="normal"
+                                value={formData.username}
+                                disabled
+                                InputProps={{
+                                    readOnly: true,
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                helperText="Username cannot be changed"
+                                FormHelperTextProps={{ sx: { color: 'rgba(255, 255, 255, 0.5)' } }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
 
-                            <div className="form-group mb-3">
-                                <label htmlFor="email">Email</label>
-                                <input
-                                    type="email"
-                                    className="form-control"
-                                    id="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        id="firstName"
+                                        label="First Name"
+                                        variant="outlined"
+                                        fullWidth
+                                        value={formData.firstName}
+                                        onChange={handleChange}
+                                        error={!!nameErrors.firstName}
+                                        helperText={nameErrors.firstName}
+                                        InputProps={{ sx: { color: 'white' } }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                                '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                                '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                            },
+                                            '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        id="lastName"
+                                        label="Last Name"
+                                        variant="outlined"
+                                        fullWidth
+                                        value={formData.lastName}
+                                        onChange={handleChange}
+                                        error={!!nameErrors.lastName}
+                                        helperText={nameErrors.lastName}
+                                        InputProps={{ sx: { color: 'white' } }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                                '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                                '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                            },
+                                            '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                        }}
+                                    />
+                                </Grid>
+                            </Grid>
 
-                            <button
+                            <TextField
+                                id="email"
+                                label="Email"
+                                type="email"
+                                variant="outlined"
+                                fullWidth
+                                margin="normal"
+                                value={formData.email}
+                                onChange={handleChange}
+                                required
+                                InputProps={{ sx: { color: 'white' } }}
+                                sx={{
+                                    my: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
+
+                            <Button
                                 type="submit"
-                                className="btn btn-primary"
+                                variant="contained"
+                                color="primary"
                                 disabled={loading || nameErrors.firstName || nameErrors.lastName}
+                                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                                sx={{ mt: 2 }}
                             >
                                 {loading ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                            </Button>
+                        </Box>
+                    </Paper>
 
-                <div className="card">
-                    <div className="card-header">
-                        <h3>Change Password</h3>
-                    </div>
-                    <div className="card-body">
-                        {passwordError && <div className="alert alert-danger">{passwordError}</div>}
-                        {passwordSuccess && <div className="alert alert-success">Password changed successfully!</div>}
+                    <Paper
+                        elevation={0}
+                        variant="outlined"
+                        sx={{
+                            p: 3,
+                            bgcolor: 'rgba(18, 18, 18, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.12)'
+                        }}
+                    >
+                        <Typography variant="h5" component="h2" color="white" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <KeyIcon />
+                            Change Password
+                        </Typography>
 
-                        <form onSubmit={handlePasswordSubmit}>
-                            <div className="form-group mb-3">
-                                <label htmlFor="currentPassword">Current Password</label>
-                                <input
-                                    type="password"
-                                    className="form-control"
-                                    id="currentPassword"
-                                    value={passwordData.currentPassword}
-                                    onChange={handlePasswordChange}
-                                    required
-                                />
-                            </div>
+                        {passwordError && <Alert severity="error" sx={{ mb: 3 }}>{passwordError}</Alert>}
+                        {passwordSuccess && <Alert severity="success" sx={{ mb: 3 }}>Password changed successfully!</Alert>}
 
-                            <div className="form-group mb-3">
-                                <label htmlFor="newPassword">New Password</label>
-                                <input
-                                    type="password"
-                                    className="form-control"
-                                    id="newPassword"
-                                    value={passwordData.newPassword}
-                                    onChange={handlePasswordChange}
-                                    required
-                                    minLength="8"
-                                />
-                                <small className="form-text text-muted">
-                                    Password must be at least 8 characters, include one uppercase letter,
-                                    one number, and one special character.
-                                </small>
-                            </div>
+                        <Box component="form" onSubmit={handlePasswordSubmit}>
+                            <TextField
+                                id="currentPassword"
+                                label="Current Password"
+                                type={showPassword.currentPassword ? 'text' : 'password'}
+                                variant="outlined"
+                                fullWidth
+                                margin="normal"
+                                value={passwordData.currentPassword}
+                                onChange={handlePasswordChange}
+                                required
+                                InputProps={{
+                                    sx: { color: 'white' },
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => handleTogglePasswordVisibility('currentPassword')}
+                                                edge="end"
+                                                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                            >
+                                                {showPassword.currentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
 
-                            <div className="form-group mb-3">
-                                <label htmlFor="confirmPassword">Confirm New Password</label>
-                                <input
-                                    type="password"
-                                    className="form-control"
-                                    id="confirmPassword"
-                                    value={passwordData.confirmPassword}
-                                    onChange={handlePasswordChange}
-                                    required
-                                    minLength="8"
-                                />
-                            </div>
+                            <TextField
+                                id="newPassword"
+                                label="New Password"
+                                type={showPassword.newPassword ? 'text' : 'password'}
+                                variant="outlined"
+                                fullWidth
+                                margin="normal"
+                                value={passwordData.newPassword}
+                                onChange={handlePasswordChange}
+                                required
+                                InputProps={{
+                                    sx: { color: 'white' },
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => handleTogglePasswordVisibility('newPassword')}
+                                                edge="end"
+                                                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                            >
+                                                {showPassword.newPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                helperText="Password must be at least 8 characters, include one uppercase letter, one number, and one special character."
+                                FormHelperTextProps={{ sx: { color: 'rgba(255, 255, 255, 0.5)' } }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
 
-                            <button
+                            <TextField
+                                id="confirmPassword"
+                                label="Confirm New Password"
+                                type={showPassword.confirmPassword ? 'text' : 'password'}
+                                variant="outlined"
+                                fullWidth
+                                margin="normal"
+                                value={passwordData.confirmPassword}
+                                onChange={handlePasswordChange}
+                                required
+                                InputProps={{
+                                    sx: { color: 'white' },
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => handleTogglePasswordVisibility('confirmPassword')}
+                                                edge="end"
+                                                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                            >
+                                                {showPassword.confirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'primary.main' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
+
+                            <Button
                                 type="submit"
-                                className="btn btn-danger"
+                                variant="contained"
+                                color="error"
                                 disabled={passwordLoading}
+                                startIcon={passwordLoading ? <CircularProgress size={20} /> : <KeyIcon />}
+                                sx={{ mt: 2 }}
                             >
                                 {passwordLoading ? 'Changing Password...' : 'Change Password'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            </Button>
+                        </Box>
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Container>
     );
 };
 
