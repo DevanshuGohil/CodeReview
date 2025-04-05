@@ -4,6 +4,7 @@ import api from '../../axiosConfig';
 import PullRequestDetails from './PullRequestDetails';
 import FileChangesList from './FileChangesList';
 import DiffViewer from './DiffViewer';
+import PRApprovalPanel from './PRApprovalPanel';
 import { Typography, Container, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import '../../styles/pull-request.css';
@@ -132,6 +133,8 @@ const PullRequestView = () => {
             </Box>
 
             <PullRequestDetails pullRequest={prData.pull_request} />
+
+            <PRApprovalPanel projectId={projectId} pullRequest={prData.pull_request} />
 
             <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
 

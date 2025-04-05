@@ -13,6 +13,7 @@ const userRoutes = require('./routes/user.routes');
 const teamRoutes = require('./routes/team.routes');
 const projectRoutes = require('./routes/project.routes');
 const githubRoutes = require('./routes/github.routes');
+const prReviewRoutes = require('./routes/pr-review.routes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -39,6 +40,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api', prReviewRoutes);
 
 // Default route
 app.get('/', (req, res) => {
