@@ -227,5 +227,33 @@ router.post('/projects/:projectId/pulls/:pullNumber/merge',
     resourceAccessMiddleware.project,
     prReviewController.mergePullRequest);
 
+/**
+ * @swagger
+ * /api/reviews/activity-summary:
+ *   get:
+ *     summary: Get PR activity summary for dashboard
+ *     tags: [PR Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeframe
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *           default: week
+ *         description: Timeframe for summary (day, week, month)
+ *     responses:
+ *       200:
+ *         description: PR activity summary data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/reviews/activity-summary',
+    authMiddleware,
+    prReviewController.getPRActivitySummary);
+
 // Export the router - this should be the last line
 module.exports = router;

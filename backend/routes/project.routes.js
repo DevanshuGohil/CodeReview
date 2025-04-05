@@ -6,6 +6,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const adminMiddleware = require('../middlewares/admin.middleware');
 const managerMiddleware = require('../middlewares/manager.middleware');
 const resourceAccessMiddleware = require('../middlewares/resource-access.middleware');
+const projectOwnerMiddleware = require('../middlewares/project-owner.middleware');
 
 /**
  * @swagger
@@ -416,5 +417,154 @@ router.delete('/:id/teams/:teamId', managerMiddleware, projectController.removeT
  *         description: Server error
  */
 router.put('/:id/github', managerMiddleware, projectController.updateGithubRepo);
+
+/**
+ * @swagger
+ * /api/projects/{projectId}:
+ *   get:
+ *     summary: Get project details
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Project ID
+ *     responses:
+ *       200:
+ *         description: Project details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Project'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:projectId', resourceAccessMiddleware.project, projectController.getProjectById);
+
+/**
+ * @swagger
+ * /api/projects/{projectId}:
+ *   put:
+ *     summary: Update project
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Project ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Updated Project Name
+ *               description:
+ *                 type: string
+ *                 example: Updated project description
+ *     responses:
+ *       200:
+ *         description: Project updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Project'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/:projectId', [authMiddleware, projectOwnerMiddleware], projectController.updateProject);
+
+/**
+ * @swagger
+ * /api/projects/{projectId}:
+ *   delete:
+ *     summary: Delete project
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Project ID
+ *     responses:
+ *       200:
+ *         description: Project deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Project deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/:projectId', [authMiddleware, projectOwnerMiddleware], projectController.deleteProject);
+
+/**
+ * @swagger
+ * /api/projects/{projectId}/health-metrics:
+ *   get:
+ *     summary: Get project health metrics
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Project ID
+ *     responses:
+ *       200:
+ *         description: Project health metrics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:projectId/health-metrics', authMiddleware, projectController.getProjectHealthMetrics);
 
 module.exports = router;

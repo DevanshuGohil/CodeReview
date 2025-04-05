@@ -1,6 +1,7 @@
 const PRComment = require('../models/pr-comment.model');
 const Project = require('../models/project.model');
 const { getIO } = require('../socket');
+const userActivityController = require('./user-activity.controller');
 
 // Create a new comment
 exports.createComment = async (req, res) => {
@@ -28,6 +29,17 @@ exports.createComment = async (req, res) => {
         });
 
         await comment.save();
+
+        // Track user activity
+        await userActivityController.trackActivity(userId, 'pr_comment', {
+            project: projectId,
+            pullRequestNumber: parseInt(pullNumber),
+            details: {
+                isReply: !!parentComment,
+                hasFileLocation: !!fileLocation,
+                contentLength: content.length
+            }
+        });
 
         // Populate user data
         const populatedComment = await PRComment.findById(comment._id)

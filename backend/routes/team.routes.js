@@ -325,4 +325,7 @@ router.post('/:id/members', managerMiddleware, teamController.addMember);
  */
 router.delete('/:id/members/:userId', managerMiddleware, teamController.removeMember);
 
+// Add new route for team collaboration metrics
+router.get('/:teamId/collaboration-metrics', authMiddleware, teamController.getTeamCollaborationMetrics);
+
 module.exports = router;

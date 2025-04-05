@@ -2,6 +2,8 @@ const PRReview = require('../models/pr-review.model');
 const Project = require('../models/project.model');
 const Team = require('../models/team.model');
 const axios = require('axios');
+const mongoose = require('mongoose');
+const userActivityController = require('./user-activity.controller');
 
 // Submit a PR review (approve or reject)
 exports.submitReview = async (req, res) => {
@@ -73,6 +75,18 @@ exports.submitReview = async (req, res) => {
                 },
                 { upsert: true, new: true }
             );
+
+            // Track user activity
+            await userActivityController.trackActivity(userId, 'pr_review', {
+                project: projectId,
+                team: teamId,
+                pullRequestNumber: pullNumber,
+                details: {
+                    action: approved ? 'approved' : 'rejected',
+                    prTitle: prResponse.data.title,
+                    hasComment: !!comment
+                }
+            });
 
             // Return the review with populated user data
             const populatedReview = await PRReview.findById(review._id)
@@ -308,6 +322,215 @@ exports.mergePullRequest = async (req, res) => {
         }
     } catch (error) {
         console.error('Error merging PR:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Add new function to get PR activity summary
+exports.getPRActivitySummary = async (req, res) => {
+    try {
+        const { timeframe = 'week' } = req.query;
+        const userId = req.user.id;
+
+        // Calculate date range based on timeframe
+        const now = new Date();
+        let startDate;
+
+        switch (timeframe) {
+            case 'day':
+                startDate = new Date(now.setDate(now.getDate() - 1));
+                break;
+            case 'month':
+                startDate = new Date(now.setMonth(now.getMonth() - 1));
+                break;
+            case 'week':
+            default:
+                startDate = new Date(now.setDate(now.getDate() - 7));
+                break;
+        }
+
+        // Get summary data
+        const summary = await PRReview.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        projectId: "$project",
+                        approved: "$approved"
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.projectId",
+                    approvals: {
+                        $sum: {
+                            $cond: [{ $eq: ["$_id.approved", true] }, "$count", 0]
+                        }
+                    },
+                    rejections: {
+                        $sum: {
+                            $cond: [{ $eq: ["$_id.approved", false] }, "$count", 0]
+                        }
+                    },
+                    total: { $sum: "$count" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "projects",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "projectDetails"
+                }
+            },
+            {
+                $unwind: "$projectDetails"
+            },
+            {
+                $project: {
+                    _id: 0,
+                    projectId: "$_id",
+                    projectName: "$projectDetails.name",
+                    approvals: 1,
+                    rejections: 1,
+                    total: 1,
+                    approvalRate: {
+                        $round: [
+                            { $multiply: [{ $divide: ["$approvals", { $max: ["$total", 1] }] }, 100] },
+                            1
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        // Get average review time
+        const averageReviewTime = await PRReview.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $project: {
+                    reviewTime: {
+                        $subtract: ["$updatedAt", "$createdAt"]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    averageTime: { $avg: "$reviewTime" }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    // Convert from milliseconds to hours
+                    averageHours: {
+                        $round: [{ $divide: ["$averageTime", 3600000] }, 1]
+                    }
+                }
+            }
+        ]);
+
+        // Get user's personal stats
+        const userStats = await PRReview.aggregate([
+            {
+                $match: {
+                    user: mongoose.Types.ObjectId(userId),
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalReviews: { $sum: 1 },
+                    approvals: {
+                        $sum: {
+                            $cond: [{ $eq: ["$approved", true] }, 1, 0]
+                        }
+                    },
+                    rejections: {
+                        $sum: {
+                            $cond: [{ $eq: ["$approved", false] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalReviews: 1,
+                    approvals: 1,
+                    rejections: 1,
+                    approvalRate: {
+                        $round: [
+                            { $multiply: [{ $divide: ["$approvals", { $max: ["$totalReviews", 1] }] }, 100] },
+                            1
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        // Get team distribution stats
+        const teamStats = await PRReview.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: "$team",
+                    totalReviews: { $sum: 1 }
+                }
+            },
+            {
+                $lookup: {
+                    from: "teams",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "teamDetails"
+                }
+            },
+            {
+                $unwind: "$teamDetails"
+            },
+            {
+                $project: {
+                    _id: 0,
+                    teamId: "$_id",
+                    teamName: "$teamDetails.name",
+                    totalReviews: 1
+                }
+            },
+            {
+                $sort: { totalReviews: -1 }
+            },
+            {
+                $limit: 5
+            }
+        ]);
+
+        // Return the combined data
+        res.json({
+            timeframe,
+            projectSummary: summary,
+            averageReviewTime: averageReviewTime[0]?.averageHours || 0,
+            userStats: userStats[0] || { totalReviews: 0, approvals: 0, rejections: 0, approvalRate: 0 },
+            teamActivity: teamStats
+        });
+    } catch (error) {
+        console.error('Error generating PR activity summary:', error.message);
         res.status(500).json({ error: error.message });
     }
 };

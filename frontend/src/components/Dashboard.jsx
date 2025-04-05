@@ -23,6 +23,10 @@ import {
     Add as AddIcon,
     Group as GroupIcon
 } from '@mui/icons-material';
+import PRActivitySummary from './dashboard/PRActivitySummary';
+import TeamCollaborationMetrics from './dashboard/TeamCollaborationMetrics';
+import ProjectHealthIndicators from './dashboard/ProjectHealthIndicators';
+import PersonalActivityFeed from './dashboard/PersonalActivityFeed';
 
 const Dashboard = () => {
     const { currentUser: user } = useAuth();
@@ -30,6 +34,8 @@ const Dashboard = () => {
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [timeframe, setTimeframe] = useState('all');
+    const [userProjects, setUserProjects] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -49,6 +55,19 @@ const Dashboard = () => {
             }
         };
         fetchData();
+    }, [user]);
+
+    useEffect(() => {
+        const fetchUserProjects = async () => {
+            if (!user) return;
+            try {
+                const projectsRes = await api.get('/projects');
+                setUserProjects(projectsRes.data);
+            } catch (err) {
+                setError(err.message || 'Failed to load user projects');
+            }
+        };
+        fetchUserProjects();
     }, [user]);
 
     if (!user) return (
@@ -88,196 +107,52 @@ const Dashboard = () => {
     });
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
-            {/* Header Section */}
-            <Box sx={{
-                mb: 4,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <Typography variant="h3" component="h1" sx={{
-                    fontWeight: 400,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2
-                }}>
-                    Welcome, {user?.firstName || user?.username}!
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h4" component="h1" gutterBottom>
+                    Dashboard
                 </Typography>
-
-                {user?.role === 'manager' && (
-                    <Stack direction="row" spacing={2}>
-                        <Button
-                            component={Link}
-                            to="/projects/new"
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            sx={{
-                                borderRadius: 1,
-                                textTransform: 'none',
-                                px: 3
-                            }}
-                        >
-                            New Project
-                        </Button>
-                        <Button
-                            component={Link}
-                            to="/teams/new"
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<GroupIcon />}
-                            sx={{
-                                borderRadius: 1,
-                                textTransform: 'none',
-                                px: 3
-                            }}
-                        >
-                            New Team
-                        </Button>
-                    </Stack>
-                )}
+                <Typography variant="body1" color="text.secondary">
+                    Welcome back, {user ? `${user.firstName || user.username}` : 'User'}!
+                </Typography>
             </Box>
 
-            {/* Main Content */}
-            <Grid container spacing={3}>
-                {/* Projects Section */}
-                <Grid item xs={12} md={8}>
-                    <Paper
-                        elevation={2}
-                        sx={{
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                            bgcolor: 'background.paper',
-                            border: 1,
-                            borderColor: 'divider'
-                        }}
-                    >
-                        <Box sx={{
-                            p: 2,
-                            bgcolor: 'primary.dark',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <Typography variant="h6" sx={{ color: 'primary.contrastText' }}>
-                                Recent Projects
-                            </Typography>
-                            <Button
-                                component={Link}
-                                to="/projects"
-                                sx={{
-                                    color: 'primary.contrastText',
-                                    textTransform: 'none',
-                                    '&:hover': {
-                                        color: 'primary.contrastText',
-                                        opacity: 0.9
-                                    }
-                                }}
-                            >
-                                View All →
-                            </Button>
-                        </Box>
-                        <Box sx={{ p: 3 }}>
-                            {projects.length === 0 ? (
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography color="text.secondary">
-                                        No projects found.
-                                        {user?.role === 'manager' && (
-                                            <Button
-                                                component={Link}
-                                                to="/projects/new"
-                                                sx={{ ml: 1 }}
-                                            >
-                                                Create one
-                                            </Button>
-                                        )}
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <List disablePadding>
-                                    {projects.slice(0, 5).map((project, index) => (
-                                        <React.Fragment key={project._id}>
-                                            {index > 0 && <Divider />}
-                                            <ListItem disablePadding>
-                                                <ListItemButton
-                                                    component={Link}
-                                                    to={`/projects/${project._id}`}
-                                                    sx={{
-                                                        py: 1.5,
-                                                        '&:hover': {
-                                                            bgcolor: 'action.hover'
-                                                        }
-                                                    }}
-                                                >
-                                                    <ListItemText
-                                                        primary={
-                                                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                                                                {project.name}
-                                                            </Typography>
-                                                        }
-                                                        secondary={project.description}
-                                                        secondaryTypographyProps={{
-                                                            sx: { color: 'text.secondary' }
-                                                        }}
-                                                    />
-                                                </ListItemButton>
-                                            </ListItem>
-                                        </React.Fragment>
-                                    ))}
-                                </List>
-                            )}
-                        </Box>
-                    </Paper>
-                </Grid>
+            {/* Left Column: PR Activity Summary and Projects */}
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+                {/* Left Column */}
+                <Grid item xs={12} md={5}>
+                    <Grid container spacing={3}>
+                        {/* PR Activity Summary */}
+                        <Grid item xs={12}>
+                            <PRActivitySummary />
+                        </Grid>
 
-                {/* Right Column */}
-                <Grid item xs={12} md={4}>
-                    <Stack spacing={3}>
-                        {/* Teams Section */}
-                        <Paper
-                            elevation={2}
-                            sx={{
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                bgcolor: 'background.paper',
-                                border: 1,
-                                borderColor: 'divider'
-                            }}
-                        >
-                            <Box sx={{
-                                p: 2,
-                                bgcolor: 'secondary.dark',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}>
-                                <Typography variant="h6" sx={{ color: 'secondary.contrastText' }}>
-                                    My Teams
-                                </Typography>
-                                <Button
-                                    component={Link}
-                                    to="/teams"
-                                    sx={{
-                                        color: 'secondary.contrastText',
-                                        textTransform: 'none',
-                                        '&:hover': {
-                                            color: 'secondary.contrastText',
-                                            opacity: 0.9
-                                        }
-                                    }}
-                                >
-                                    View All →
-                                </Button>
-                            </Box>
-                            <Box sx={{ p: 3 }}>
-                                {teams.length === 0 ? (
+                        {/* Projects Section */}
+                        <Grid item xs={12}>
+                            <Paper sx={{ p: 2, height: '100%', width: '110%' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography variant="h6" component="h2">
+                                        Your Projects
+                                    </Typography>
+                                    <Button
+                                        component={Link}
+                                        to="/projects/new"
+                                        startIcon={<AddIcon />}
+                                        variant="contained"
+                                        size="small"
+                                    >
+                                        New Project
+                                    </Button>
+                                </Box>
+
+                                {projects.length === 0 ? (
                                     <Box sx={{ textAlign: 'center' }}>
                                         <Typography color="text.secondary">
-                                            No teams found.
+                                            No projects found.
                                             {user?.role === 'manager' && (
                                                 <Button
                                                     component={Link}
-                                                    to="/teams/new"
+                                                    to="/projects/new"
                                                     sx={{ ml: 1 }}
                                                 >
                                                     Create one
@@ -287,13 +162,13 @@ const Dashboard = () => {
                                     </Box>
                                 ) : (
                                     <List disablePadding>
-                                        {userTeams.map((team, index) => (
-                                            <React.Fragment key={team._id}>
+                                        {projects.slice(0, 5).map((project, index) => (
+                                            <React.Fragment key={project._id}>
                                                 {index > 0 && <Divider />}
                                                 <ListItem disablePadding>
                                                     <ListItemButton
                                                         component={Link}
-                                                        to={`/teams/${team._id}`}
+                                                        to={`/projects/${project._id}`}
                                                         sx={{
                                                             py: 1.5,
                                                             '&:hover': {
@@ -304,9 +179,13 @@ const Dashboard = () => {
                                                         <ListItemText
                                                             primary={
                                                                 <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                                                                    {team.name}
+                                                                    {project.name}
                                                                 </Typography>
                                                             }
+                                                            secondary={project.description}
+                                                            secondaryTypographyProps={{
+                                                                sx: { color: 'text.secondary' }
+                                                            }}
                                                         />
                                                     </ListItemButton>
                                                 </ListItem>
@@ -314,9 +193,26 @@ const Dashboard = () => {
                                         ))}
                                     </List>
                                 )}
-                            </Box>
-                        </Paper>
-                    </Stack>
+                            </Paper>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                {/* Right Column: Team Collaboration */}
+                <Grid item xs={12} md={7} width="90%">
+                    {userTeams && userTeams.length > 0 && (
+                        <TeamCollaborationMetrics team={userTeams[0]} timeframeFilter={timeframe} />
+                    )}
+                </Grid>
+            </Grid>
+
+            {/* Project Health Indicators and Activity Feed Section */}
+            <Grid container spacing={3}>
+                <Grid item xs={12} md={8}>
+                    <ProjectHealthIndicators userProjects={userProjects} timeframeFilter={timeframe} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <PersonalActivityFeed />
                 </Grid>
             </Grid>
         </Container>
