@@ -5,6 +5,7 @@ import PullRequestDetails from './PullRequestDetails';
 import FileChangesList from './FileChangesList';
 import DiffViewer from './DiffViewer';
 import PRApprovalPanel from './PRApprovalPanel';
+import PRCommentSection from './PRCommentSection';
 import { Typography, Container, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import '../../styles/pull-request.css';
@@ -151,6 +152,8 @@ const PullRequestView = () => {
                     <DiffViewer file={selectedFile} />
                 </div>
             </div>
+
+            <PRCommentSection projectId={projectId} pullRequest={prData.pull_request} />
         </Container>
     );
 };

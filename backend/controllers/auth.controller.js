@@ -6,11 +6,13 @@ const jwt = require('jsonwebtoken');
 exports.register = async (req, res) => {
     try {
         const { username, email, password, firstName, lastName } = req.body;
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
         // Check if user already exists
         let user = await User.findOne({ email });
 
         if (user) {
+            console.log(`[${new Date().toISOString()}] Registration failed - Email already exists: ${email} from IP: ${ip}`);
             return res.status(400).json({ message: 'User already exists' });
         }
 
@@ -18,6 +20,7 @@ exports.register = async (req, res) => {
         user = await User.findOne({ username });
 
         if (user) {
+            console.log(`[${new Date().toISOString()}] Registration failed - Username already taken: ${username} from IP: ${ip}`);
             return res.status(400).json({ message: 'Username is already taken' });
         }
 
@@ -52,11 +55,15 @@ exports.register = async (req, res) => {
         // Return user without password
         const userResponse = await User.findById(user.id).select('-password');
 
+        // Log successful registration
+        console.log(`[${new Date().toISOString()}] New user registered: ${username} (${email}), ID: ${user.id}, IP: ${ip}`);
+
         res.status(201).json({
             token,
             user: userResponse
         });
     } catch (error) {
+        console.error('Registration error:', error.message);
         res.status(500).json({ error: error.message });
     }
 };
@@ -64,6 +71,9 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { username, password } = req.body;
+
+        // Get IP address from request
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
         // Check if user exists
         const user = await User.findOne({
@@ -74,6 +84,7 @@ exports.login = async (req, res) => {
         });
 
         if (!user) {
+            console.log(`[${new Date().toISOString()}] Failed login attempt for username: ${username} from IP: ${ip}`);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -81,6 +92,7 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
+            console.log(`[${new Date().toISOString()}] Failed login attempt for user: ${user.username} (${user.email}) from IP: ${ip}`);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -99,12 +111,16 @@ exports.login = async (req, res) => {
         // Return user without password
         const userResponse = await User.findById(user.id).select('-password');
 
+        // Log successful login
+        console.log(`[${new Date().toISOString()}] User logged in: ${user.username} (${user.email}), Role: ${user.role}, IP: ${ip}`);
+
         res.json({
             token,
             user: userResponse,
             requirePasswordChange: user.requirePasswordChange
         });
     } catch (error) {
+        console.error('Login error:', error.message);
         res.status(500).json({ error: error.message });
     }
 };
@@ -119,9 +135,24 @@ exports.getMe = async (req, res) => {
 };
 
 exports.logout = async (req, res) => {
-    // JWT tokens are stateless, so we can't invalidate them on the server
-    // The client should remove the token from local storage
-    res.json({ message: 'Logged out successfully' });
+    try {
+        const user = await User.findById(req.user.id).select('username email');
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+        // Log logout
+        if (user) {
+            console.log(`[${new Date().toISOString()}] User logged out: ${user.username} (${user.email}), IP: ${ip}`);
+        } else {
+            console.log(`[${new Date().toISOString()}] User logged out: ID ${req.user.id}, IP: ${ip}`);
+        }
+
+        // JWT tokens are stateless, so we can't invalidate them on the server
+        // The client should remove the token from local storage
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Logout error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 exports.changePassword = async (req, res) => {

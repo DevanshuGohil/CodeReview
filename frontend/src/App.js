@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-ro
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import Navbar from './components/layout/Navbar';
 import Breadcrumbs from './components/layout/Breadcrumbs';
 import Login from './components/auth/Login';
@@ -269,12 +270,12 @@ const ProtectedLayout = ({ children }) => {
   }
 
   return (
-    <>
+    <SocketProvider>
       <Breadcrumbs />
       <div className="container mt-4">
         {children}
       </div>
-    </>
+    </SocketProvider>
   );
 };
 
