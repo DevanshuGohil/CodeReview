@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
+import Breadcrumbs from './components/layout/Breadcrumbs';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Profile from './components/auth/Profile';
@@ -184,113 +185,98 @@ function App() {
         <Router>
           <div className="app">
             <Navbar />
-            <div className="container mt-4">
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/register" element={
-                  <PublicRoute>
-                    <Register />
-                  </PublicRoute>
-                } />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
+              <Route path="/register" element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              } />
 
-                {/* Password Reset Route */}
-                <Route path="/reset-password" element={
-                  <ResetPassword />
-                } />
+              {/* Password Reset Route */}
+              <Route path="/reset-password" element={
+                <ResetPassword />
+              } />
 
-                {/* Protected routes */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
+              {/* All authenticated routes - include breadcrumbs */}
+              <Route path="/*" element={
+                <ProtectedLayout>
+                  <Routes>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/profile" element={<Profile />} />
 
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
+                    {/* Admin routes */}
+                    <Route path="/admin/members" element={
+                      <AdminRoute>
+                        <MemberList />
+                      </AdminRoute>
+                    } />
 
-                {/* Admin routes - only for user management */}
-                <Route path="/admin/members" element={
-                  <AdminRoute>
-                    <MemberList />
-                  </AdminRoute>
-                } />
+                    {/* Team routes */}
+                    <Route path="/teams" element={<TeamList />} />
+                    <Route path="/teams/new" element={
+                      <ManagerRoute>
+                        <TeamForm />
+                      </ManagerRoute>
+                    } />
+                    <Route path="/teams/:id" element={<TeamDetail />} />
 
-                {/* Team routes */}
-                <Route path="/teams" element={
-                  <ProtectedRoute>
-                    <TeamList />
-                  </ProtectedRoute>
-                } />
-                <Route path="/teams/new" element={
-                  <ManagerRoute>
-                    <TeamForm />
-                  </ManagerRoute>
-                } />
-                <Route path="/teams/:id" element={
-                  <ProtectedRoute>
-                    <TeamDetail />
-                  </ProtectedRoute>
-                } />
+                    {/* Project routes */}
+                    <Route path="/projects" element={<ProjectList />} />
+                    <Route path="/projects/new" element={
+                      <ManagerRoute>
+                        <ProjectForm />
+                      </ManagerRoute>
+                    } />
+                    <Route path="/projects/:id" element={<ProjectDetail />} />
 
-                {/* Project routes */}
-                <Route path="/projects" element={
-                  <ProtectedRoute>
-                    <ProjectList />
-                  </ProtectedRoute>
-                } />
-                <Route path="/projects/new" element={
-                  <ManagerRoute>
-                    <ProjectForm />
-                  </ManagerRoute>
-                } />
-                <Route path="/projects/:id" element={
-                  <ProtectedRoute>
-                    <ProjectDetail />
-                  </ProtectedRoute>
-                } />
+                    {/* GitHub integration routes */}
+                    <Route path="/projects/:projectId/repository/*" element={<RepositoryFiles />} />
+                    <Route path="/projects/:projectId/pulls" element={<PullRequestList />} />
+                    <Route path="/projects/:projectId/pulls/:pullNumber" element={<PullRequestView />} />
 
-                {/* GitHub integration routes */}
-                <Route path="/projects/:projectId/repository/*" element={
-                  <ProtectedRoute>
-                    <RepositoryFiles />
-                  </ProtectedRoute>
-                } />
-                <Route path="/projects/:projectId/pulls" element={
-                  <ProtectedRoute>
-                    <PullRequestList />
-                  </ProtectedRoute>
-                } />
-                <Route path="/projects/:projectId/pulls/:pullNumber" element={
-                  <ProtectedRoute>
-                    <PullRequestView />
-                  </ProtectedRoute>
-                } />
+                    {/* Redirect root to dashboard */}
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-                {/* Redirect root to dashboard or login */}
-                <Route path="/" element={
-                  <Navigate to="/dashboard" replace />
-                } />
-
-                {/* Catch-all route - redirect to login if not authenticated, dashboard if authenticated */}
-                <Route path="*" element={
-                  <AuthRedirect />
-                } />
-              </Routes>
-            </div>
+                    {/* Catch-all route */}
+                    <Route path="*" element={<Navigate to="/dashboard" />} />
+                  </Routes>
+                </ProtectedLayout>
+              } />
+            </Routes>
           </div>
         </Router>
       </ThemeProvider>
     </AuthProvider>
   );
 }
+
+// Protected Layout component that includes breadcrumbs
+const ProtectedLayout = ({ children }) => {
+  const { isAuthenticated, requirePasswordChange } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requirePasswordChange) {
+    return <Navigate to="/reset-password" replace />;
+  }
+
+  return (
+    <>
+      <Breadcrumbs />
+      <div className="container mt-4">
+        {children}
+      </div>
+    </>
+  );
+};
 
 // Auth redirect component - decides where to redirect based on auth status
 const AuthRedirect = () => {

@@ -91,14 +91,14 @@ router.get('/:owner/:repo/pulls', auth, async (req, res) => {
 });
 
 // Get repository contents
-router.get('/:owner/:repo/contents/*', auth, async (req, res) => {
+router.get('/:owner/:repo/contents', auth, async (req, res) => {
     try {
         const { owner, repo } = req.params;
-        const path = req.params[0] || '';
+        const { path } = req.query; // Get path from query param
         const githubToken = process.env.GITHUB_TOKEN;
 
         const response = await axios.get(
-            `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+            `https://api.github.com/repos/${owner}/${repo}/contents/${path || ''}`,
             {
                 headers: {
                     'Authorization': `token ${githubToken}`,
@@ -107,7 +107,15 @@ router.get('/:owner/:repo/contents/*', auth, async (req, res) => {
             }
         );
 
-        res.json(response.data);
+        // If response is an array, it's a directory listing
+        const files = Array.isArray(response.data) ? response.data : [response.data];
+
+        // Return a consistent response format
+        res.json({
+            files,
+            path: path || '',
+            repo: { owner, repo }
+        });
     } catch (error) {
         console.error('GitHub API Error:', error.response?.data || error.message);
         res.status(error.response?.status || 500).json({

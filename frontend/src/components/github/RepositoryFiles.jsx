@@ -15,7 +15,12 @@ import {
     ListItemText,
     Paper,
     Divider,
-    Breadcrumbs
+    Breadcrumbs,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    IconButton
 } from '@mui/material';
 import {
     Folder as FolderIcon,
@@ -23,7 +28,10 @@ import {
     ArrowBack as ArrowBackIcon,
     ArrowUpward as ArrowUpwardIcon,
     GitHub as GitHubIcon,
-    MergeType as MergeTypeIcon
+    MergeType as MergeTypeIcon,
+    Close as CloseIcon,
+    Code as CodeIcon,
+    ContentCopy as CopyIcon
 } from '@mui/icons-material';
 
 const RepositoryFiles = () => {
@@ -31,6 +39,10 @@ const RepositoryFiles = () => {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [fileContent, setFileContent] = useState('');
+    const [fileLoading, setFileLoading] = useState(false);
+    const [fileError, setFileError] = useState(null);
     const { projectId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -83,6 +95,46 @@ const RepositoryFiles = () => {
         const newPath = parts.join('/');
 
         navigate(`/projects/${projectId}/repository${newPath ? `?path=${newPath}` : ''}`);
+    };
+
+    // Function to view file content
+    const handleViewFile = async (file) => {
+        if (file.type !== 'file') return;
+
+        setSelectedFile(file);
+        setFileLoading(true);
+        setFileError(null);
+
+        try {
+            // Check if file size is reasonable (< 1MB)
+            if (file.size > 1000000) {
+                setFileError("File is too large to display inline. Please use the GitHub link to view.");
+                setFileLoading(false);
+                return;
+            }
+
+            const response = await fetch(file.download_url);
+            const content = await response.text();
+            setFileContent(content);
+        } catch (err) {
+            setFileError("Failed to load file content: " + (err.message || "Unknown error"));
+            console.error("Error loading file:", err);
+        } finally {
+            setFileLoading(false);
+        }
+    };
+
+    // Close file viewer modal
+    const handleCloseFileViewer = () => {
+        setSelectedFile(null);
+        setFileContent('');
+        setFileError(null);
+    };
+
+    // Copy file content to clipboard
+    const handleCopyContent = () => {
+        navigator.clipboard.writeText(fileContent);
+        // Could add a toast notification here
     };
 
     if (loading) return (
@@ -220,16 +272,28 @@ const RepositoryFiles = () => {
                                         sx={{ color: 'white' }}
                                     />
                                     {file.type === 'file' && file.download_url && (
-                                        <Button
-                                            href={file.download_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            size="small"
-                                            variant="outlined"
-                                            color="primary"
-                                        >
-                                            View
-                                        </Button>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                color="primary"
+                                                startIcon={<CodeIcon />}
+                                                onClick={() => handleViewFile(file)}
+                                            >
+                                                View
+                                            </Button>
+                                            <Button
+                                                href={file.html_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                size="small"
+                                                variant="outlined"
+                                                color="primary"
+                                                startIcon={<GitHubIcon />}
+                                            >
+                                                GitHub
+                                            </Button>
+                                        </Box>
                                     )}
                                 </ListItem>
                                 {index < files.length - 1 && (
@@ -240,6 +304,92 @@ const RepositoryFiles = () => {
                     )}
                 </List>
             </Paper>
+
+            {/* File Viewer Modal */}
+            <Dialog
+                open={!!selectedFile}
+                onClose={handleCloseFileViewer}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'rgba(18, 18, 18, 0.95)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        minHeight: '70vh'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FileIcon />
+                        <Typography variant="h6" component="div" sx={{ color: 'white' }}>
+                            {selectedFile?.name}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <IconButton
+                            color="primary"
+                            onClick={handleCopyContent}
+                            disabled={!fileContent || fileLoading || fileError}
+                            aria-label="copy content"
+                            title="Copy to clipboard"
+                        >
+                            <CopyIcon />
+                        </IconButton>
+                        <IconButton
+                            edge="end"
+                            color="inherit"
+                            onClick={handleCloseFileViewer}
+                            aria-label="close"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 0 }}>
+                    {fileLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', p: 4 }}>
+                            <CircularProgress />
+                            <Typography sx={{ ml: 2, color: 'white' }}>Loading file content...</Typography>
+                        </Box>
+                    ) : fileError ? (
+                        <Alert severity="error" sx={{ m: 2 }}>
+                            {fileError}
+                        </Alert>
+                    ) : (
+                        <Box
+                            component="pre"
+                            sx={{
+                                m: 0,
+                                p: 2,
+                                overflow: 'auto',
+                                width: '100%',
+                                height: '100%',
+                                color: 'white',
+                                fontSize: '0.875rem',
+                                fontFamily: 'monospace',
+                                bgcolor: 'rgba(30, 30, 30, 1)'
+                            }}
+                        >
+                            {fileContent}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.12)', p: 2 }}>
+                    <Button
+                        href={selectedFile?.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        startIcon={<GitHubIcon />}
+                        variant="outlined"
+                    >
+                        View on GitHub
+                    </Button>
+                    <Button onClick={handleCloseFileViewer} variant="contained">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };
