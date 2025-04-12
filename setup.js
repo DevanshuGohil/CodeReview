@@ -29,6 +29,16 @@ const config = {
         password: 'Admin@123',
         firstName: 'Admin',
         lastName: 'User'
+    },
+    // Default Atlas connection string (will be replaced with user input)
+    mongoAtlasUri: '',
+    // Email configuration (will be updated with user input)
+    email: {
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        user: '',
+        password: ''
     }
 };
 
@@ -102,6 +112,51 @@ function checkPrerequisites() {
     return Promise.resolve(true);
 }
 
+// Prompt for email configuration
+function promptEmailConfig() {
+    return new Promise((resolve) => {
+        console.log('\n🔧 Email Configuration');
+        console.log('---------------------------------------------------------');
+        console.log('Setting up email notifications for the application.');
+        console.log('If you\'re using Gmail, you\'ll need to create an app password:');
+        console.log('1. Go to your Google Account > Security > 2-Step Verification');
+        console.log('2. At the bottom, click on "App passwords"');
+        console.log('3. Select "Mail" and your device, then generate');
+        console.log('4. Use this generated password here (not your regular Gmail password)');
+        console.log('---------------------------------------------------------');
+
+        rl.question('\nDo you want to configure email notifications? (yes/no): ', (answer) => {
+            if (answer.toLowerCase() !== 'yes') {
+                console.log('⚠️ Email notifications will be disabled. You can configure them later in the .env file.');
+                resolve(false);
+                return;
+            }
+
+            rl.question('Email Host (default: smtp.gmail.com): ', (host) => {
+                if (host) config.email.host = host;
+
+                rl.question('Email Port (default: 587): ', (port) => {
+                    if (port) config.email.port = parseInt(port);
+
+                    rl.question('Email Secure (true/false) (default: false): ', (secure) => {
+                        if (secure === 'true') config.email.secure = true;
+
+                        rl.question('Email User (your email address): ', (user) => {
+                            config.email.user = user;
+
+                            rl.question('Email Password (your app password): ', (password) => {
+                                config.email.password = password;
+                                console.log('✅ Email configuration completed');
+                                resolve(true);
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
 // Update .env file
 function updateEnvFile() {
     console.log('🔧 Updating backend .env file...');
@@ -109,8 +164,15 @@ function updateEnvFile() {
     const envPath = path.join(__dirname, 'backend', '.env');
     const envContent = `GITHUB_TOKEN=your_github_token_here
 PORT=${config.backendPort}
-MONGODB_URI=mongodb://localhost:27017/${config.dbName}
+MONGODB_URI=${config.mongoAtlasUri}
 JWT_SECRET=${Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}
+
+# Email Configuration
+EMAIL_HOST=${config.email.host}
+EMAIL_PORT=${config.email.port}
+EMAIL_SECURE=${config.email.secure}
+EMAIL_USER=${config.email.user}
+EMAIL_PASSWORD=${config.email.password}
 `;
 
     fs.writeFileSync(envPath, envContent);
@@ -180,9 +242,12 @@ function createAdminUser() {
 
 // Main function
 async function main() {
-    console.log('🚀 Starting CodeReview project setup...');
+    console.log('🚀 Starting CodeReview project setup with MongoDB Atlas...');
 
-    const mongoAvailable = await checkPrerequisites();
+    await checkPrerequisites();
+
+    // Configure email
+    await promptEmailConfig();
 
     // Update configuration files
     updateEnvFile();
@@ -194,7 +259,7 @@ async function main() {
     setupFrontend();
 
     // Create admin user if MongoDB is available
-    if (mongoAvailable) {
+    if (checkMongoDB()) {
         createAdminUser();
     }
 

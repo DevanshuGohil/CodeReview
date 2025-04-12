@@ -2,6 +2,7 @@
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const emailService = require('../services/email.service');
 
 exports.register = async (req, res) => {
     try {
@@ -57,6 +58,17 @@ exports.register = async (req, res) => {
 
         // Log successful registration
         console.log(`[${new Date().toISOString()}] New user registered: ${username} (${email}), ID: ${user.id}, IP: ${ip}`);
+
+        // Send welcome email
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+            try {
+                await emailService.sendWelcomeEmail(user);
+                console.log(`Welcome email sent to ${email}`);
+            } catch (err) {
+                console.error(`Failed to send welcome email to ${email}:`, err);
+                // Don't fail registration if email fails
+            }
+        }
 
         res.status(201).json({
             token,

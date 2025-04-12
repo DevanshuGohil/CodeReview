@@ -1,7 +1,7 @@
 // components/teams/TeamDetail.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import UserSelector from '../users/UserSelector';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -50,6 +50,7 @@ const TeamDetail = () => {
     const [editName, setEditName] = useState('');
     const [editDescription, setEditDescription] = useState('');
 
+    const navigate = useNavigate();
     const { id } = useParams();
     const { currentUser } = useAuth();
 
@@ -172,6 +173,27 @@ const TeamDetail = () => {
         }
     };
 
+    const handleDeleteTeam = async () => {
+        if (!canManageTeam) {
+            setError("Only managers can delete teams");
+            return;
+        }
+
+        // Show confirmation dialog with team name for clarity
+        if (!window.confirm(`Are you sure you want to delete team "${team.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/teams/${id}`);
+            // Show success message and navigate back to teams list
+            alert('Team deleted successfully');
+            navigate('/teams');
+        } catch (err) {
+            setError(err.response?.data?.message || err.message);
+        }
+    };
+
     if (loading) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography>Loading team details...</Typography></Container>;
     if (error && !team) return <Container maxWidth="lg" sx={{ mt: 4 }}><Alert severity="error">Error: {error}</Alert></Container>;
     if (!team) return <Container maxWidth="lg" sx={{ mt: 4 }}><Alert severity="warning">Team not found</Alert></Container>;
@@ -205,14 +227,24 @@ const TeamDetail = () => {
                 )}
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     {canManageTeam && !isEditing && (
-                        <Tooltip title="Edit Team Details">
-                            <IconButton
-                                onClick={handleStartEditing}
-                                color="primary"
-                            >
-                                <EditIcon />
-                            </IconButton>
-                        </Tooltip>
+                        <>
+                            <Tooltip title="Edit Team Details">
+                                <IconButton
+                                    onClick={handleStartEditing}
+                                    color="primary"
+                                >
+                                    <EditIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Team">
+                                <IconButton
+                                    onClick={handleDeleteTeam}
+                                    color="error"
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </>
                     )}
                     {isEditing && (
                         <>

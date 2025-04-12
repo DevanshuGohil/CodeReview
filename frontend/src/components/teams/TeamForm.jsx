@@ -11,13 +11,16 @@ import {
     Paper,
     Box,
     Alert,
-    Grid
+    Grid,
+    CircularProgress
 } from '@mui/material';
 
 const TeamForm = () => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [error, setError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
     const { currentUser } = useAuth();
 
@@ -33,6 +36,16 @@ const TeamForm = () => {
         }
     }, [currentUser, navigate]);
 
+    // Redirect after successful creation
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => {
+                navigate('/teams');
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [success, navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -42,11 +55,16 @@ const TeamForm = () => {
             return;
         }
 
+        setIsSubmitting(true);
+        setError(null);
+
         try {
             await api.post('/teams', { name, description });
-            navigate('/teams');
+            setSuccess(true);
+            // Redirect will happen via useEffect
         } catch (err) {
             setError(err.response?.data?.message || err.message);
+            setIsSubmitting(false);
         }
     };
 
@@ -78,6 +96,11 @@ const TeamForm = () => {
                 </Typography>
 
                 {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 3 }}>
+                        Team created successfully! Redirecting to teams page...
+                    </Alert>
+                )}
 
                 <Box component="form" onSubmit={handleSubmit} noValidate>
                     <Grid container spacing={3}>
@@ -90,6 +113,7 @@ const TeamForm = () => {
                                 variant="outlined"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
+                                disabled={isSubmitting}
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         '& fieldset': {
@@ -112,6 +136,7 @@ const TeamForm = () => {
                                 onChange={(e) => setDescription(e.target.value)}
                                 multiline
                                 rows={4}
+                                disabled={isSubmitting}
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         '& fieldset': {
@@ -138,6 +163,7 @@ const TeamForm = () => {
                                             backgroundColor: 'rgba(255, 255, 255, 0.08)'
                                         }
                                     }}
+                                    disabled={isSubmitting}
                                 >
                                     Cancel
                                 </Button>
@@ -145,6 +171,8 @@ const TeamForm = () => {
                                     type="submit"
                                     variant="contained"
                                     color="primary"
+                                    disabled={isSubmitting || !name}
+                                    startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
                                     sx={{
                                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.4)',
                                         '&:hover': {
@@ -152,7 +180,7 @@ const TeamForm = () => {
                                         }
                                     }}
                                 >
-                                    Create Team
+                                    {isSubmitting ? 'Creating...' : 'Create Team'}
                                 </Button>
                             </Box>
                         </Grid>

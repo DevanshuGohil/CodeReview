@@ -1,7 +1,9 @@
 // controllers/project.controller.js
 const Project = require('../models/project.model');
 const Team = require('../models/team.model');
+const User = require('../models/user.model');
 const mongoose = require('mongoose');
+const emailService = require('../services/email.service');
 
 exports.createProject = async (req, res) => {
     try {
@@ -24,6 +26,39 @@ exports.createProject = async (req, res) => {
         });
 
         await project.save();
+
+        // If teams were specified, send notification emails to all team members
+        if (teams && teams.length > 0) {
+            // Get the created project with populated teams
+            const populatedProject = await Project.findById(project._id)
+                .populate({
+                    path: 'teams.team',
+                    select: 'name description members',
+                    populate: {
+                        path: 'members.user',
+                        select: 'username email firstName lastName'
+                    }
+                });
+
+            // Notify all team members about the project
+            for (const projectTeam of populatedProject.teams) {
+                const team = projectTeam.team;
+                const accessLevel = projectTeam.accessLevel;
+
+                if (team && team.members && team.members.length > 0) {
+                    for (const member of team.members) {
+                        if (member.user) {
+                            await emailService.sendProjectInvitationEmail(
+                                member.user,
+                                project,
+                                team,
+                                accessLevel
+                            );
+                        }
+                    }
+                }
+            }
+        }
 
         res.status(201).json(project);
     } catch (error) {
@@ -110,13 +145,14 @@ exports.updateProject = async (req, res) => {
 
 exports.deleteProject = async (req, res) => {
     try {
-        const project = await Project.findById(req.params.id);
+        const projectId = req.params.id || req.params.projectId;
 
-        if (!project) {
+        // Use findByIdAndDelete instead of remove()
+        const result = await Project.findByIdAndDelete(projectId);
+
+        if (!result) {
             return res.status(404).json({ message: 'Project not found' });
         }
-
-        await project.remove();
 
         res.json({ message: 'Project deleted successfully' });
     } catch (error) {
@@ -134,7 +170,8 @@ exports.addTeam = async (req, res) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        const teamDoc = await Team.findById(team);
+        const teamDoc = await Team.findById(team)
+            .populate('members.user', 'username email firstName lastName');
 
         if (!teamDoc) {
             return res.status(404).json({ message: 'Team not found' });
@@ -153,6 +190,20 @@ exports.addTeam = async (req, res) => {
         project.updatedAt = Date.now();
 
         await project.save();
+
+        // Send notification emails to all team members
+        if (teamDoc.members && teamDoc.members.length > 0) {
+            for (const member of teamDoc.members) {
+                if (member.user) {
+                    await emailService.sendProjectInvitationEmail(
+                        member.user,
+                        project,
+                        teamDoc,
+                        accessLevel || 'read'
+                    );
+                }
+            }
+        }
 
         // Return fully populated project data
         const populatedProject = await Project.findById(req.params.id)

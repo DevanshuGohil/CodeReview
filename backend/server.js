@@ -73,7 +73,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/github', githubRoutes);
-app.use('/api/reviews', prReviewRoutes);
+app.use('/api', prReviewRoutes);
+app.use('/api', prCommentRoutes);
 app.use('/api/activities', userActivityRoutes);
 
 // Default route

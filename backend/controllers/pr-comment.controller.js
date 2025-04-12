@@ -1,7 +1,10 @@
 const PRComment = require('../models/pr-comment.model');
 const Project = require('../models/project.model');
+const User = require('../models/user.model');
+const Team = require('../models/team.model');
 const { getIO } = require('../socket');
 const userActivityController = require('./user-activity.controller');
+const emailService = require('../services/email.service');
 
 // Create a new comment
 exports.createComment = async (req, res) => {
@@ -46,8 +49,68 @@ exports.createComment = async (req, res) => {
             .populate('user', 'username email firstName lastName avatar')
             .populate({
                 path: 'parentComment',
-                populate: { path: 'user', select: 'username firstName lastName avatar' }
+                populate: { path: 'user', select: 'username firstName lastName avatar email' }
             });
+
+        // Get commenter details for email notification
+        const commenter = await User.findById(userId);
+
+        // Handle email notifications
+        try {
+            // If this is a reply to a comment, notify the original commenter
+            if (parentComment) {
+                const parentCommentObj = await PRComment.findById(parentComment)
+                    .populate('user', 'email firstName lastName');
+
+                // Don't notify yourself
+                if (parentCommentObj.user._id.toString() !== userId) {
+                    // Find the team associated with this project
+                    let associatedTeam = null;
+                    if (project.teams && project.teams.length > 0) {
+                        // Find first team for simplicity - can be enhanced to find the most relevant team
+                        const teamId = project.teams[0].team;
+                        associatedTeam = await Team.findById(teamId);
+                    }
+
+                    // Send email notification to the parent comment author
+                    await emailService.sendCommentNotificationEmail(
+                        parentCommentObj.user,  // recipient
+                        commenter,              // commenter
+                        populatedComment,       // comment
+                        project,                // project
+                        associatedTeam,         // team (can be null)
+                        true                    // isReply
+                    );
+                }
+            } else {
+                // This is a new thread. Find all team members to notify about the new comment
+                if (project.teams && project.teams.length > 0) {
+                    // For simplicity, we're only notifying the first team's members
+                    // For a more comprehensive solution, you might want to notify members of all teams
+                    const teamId = project.teams[0].team;
+                    const team = await Team.findById(teamId).populate('members.user');
+
+                    if (team && team.members) {
+                        // Notify all team members except the commenter
+                        for (const member of team.members) {
+                            if (member.user._id.toString() !== userId) {
+                                await emailService.sendCommentNotificationEmail(
+                                    member.user,  // recipient
+                                    commenter,    // commenter
+                                    populatedComment, // comment
+                                    project,      // project
+                                    team,         // team
+                                    false         // isReply
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (emailError) {
+            // Log email errors but don't fail the request
+            console.error('Error sending comment notification emails:', emailError);
+        }
 
         // Emit socket event for real-time updates
         const io = getIO();
@@ -58,9 +121,6 @@ exports.createComment = async (req, res) => {
         const numClients = roomSockets ? roomSockets.size : 0;
 
         console.log(`[${new Date().toISOString()}] Emitting comment-added event to room ${room} with ${numClients} client(s)`);
-
-        // Use broadcast.to to send to all clients EXCEPT the sender
-        // io.to(room).emit('comment-added', populatedComment);
 
         // Use io.in or io.to to send to ALL clients including the sender
         io.in(room).emit('comment-added', populatedComment);

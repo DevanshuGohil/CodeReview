@@ -17,11 +17,13 @@ import {
     Paper,
     Chip,
     IconButton,
-    Tooltip
+    Tooltip,
+    ButtonGroup
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const ProjectList = () => {
     const [projects, setProjects] = useState([]);
@@ -29,21 +31,45 @@ const ProjectList = () => {
     const [error, setError] = useState(null);
     const { currentUser } = useAuth();
 
-    useEffect(() => {
-        const fetchProjects = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get('/projects');
-                setProjects(response.data);
-                setLoading(false);
-            } catch (err) {
-                setError(err.message);
-                setLoading(false);
-            }
-        };
+    // Check if user is a manager (can delete projects)
+    const canManageProject = currentUser?.role === 'manager';
 
+    const fetchProjects = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/projects');
+            setProjects(response.data);
+            setLoading(false);
+        } catch (err) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProjects();
     }, []);
+
+    const handleDeleteProject = async (projectId, projectName) => {
+        if (!canManageProject) {
+            alert("Only managers can delete projects");
+            return;
+        }
+
+        // Show confirmation dialog with project name for clarity
+        if (!window.confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/projects/${projectId}`);
+            // Show success message and refresh project list
+            alert('Project deleted successfully');
+            fetchProjects(); // Refresh the project list
+        } catch (err) {
+            setError(err.response?.data?.message || err.message);
+        }
+    };
 
     if (loading) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography>Loading projects...</Typography></Container>;
     if (error) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography color="error">Error: {error}</Typography></Container>;
@@ -141,15 +167,25 @@ const ProjectList = () => {
                                         )}
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Button
-                                            component={Link}
-                                            to={`/projects/${project._id}`}
-                                            size="small"
-                                            color="primary"
-                                            startIcon={<VisibilityIcon />}
-                                        >
-                                            View
-                                        </Button>
+                                        <ButtonGroup size="small">
+                                            <Button
+                                                component={Link}
+                                                to={`/projects/${project._id}`}
+                                                color="primary"
+                                                startIcon={<VisibilityIcon />}
+                                            >
+                                                View
+                                            </Button>
+                                            {canManageProject && (
+                                                <Button
+                                                    color="error"
+                                                    onClick={() => handleDeleteProject(project._id, project.name)}
+                                                    startIcon={<DeleteIcon />}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </ButtonGroup>
                                     </TableCell>
                                 </TableRow>
                             ))

@@ -17,11 +17,13 @@ import {
     Paper,
     Chip,
     IconButton,
-    Tooltip
+    Tooltip,
+    ButtonGroup
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const TeamList = () => {
     const [teams, setTeams] = useState([]);
@@ -29,21 +31,45 @@ const TeamList = () => {
     const [error, setError] = useState(null);
     const { currentUser } = useAuth();
 
-    useEffect(() => {
-        const fetchTeams = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get('/teams');
-                setTeams(response.data);
-                setLoading(false);
-            } catch (err) {
-                setError(err.message);
-                setLoading(false);
-            }
-        };
+    // Check if user is a manager (can delete teams)
+    const canManageTeam = currentUser?.role === 'manager';
 
+    const fetchTeams = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/teams');
+            setTeams(response.data);
+            setLoading(false);
+        } catch (err) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTeams();
     }, []);
+
+    const handleDeleteTeam = async (teamId, teamName) => {
+        if (!canManageTeam) {
+            alert("Only managers can delete teams");
+            return;
+        }
+
+        // Show confirmation dialog with team name for clarity
+        if (!window.confirm(`Are you sure you want to delete team "${teamName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/teams/${teamId}`);
+            // Show success message and refresh team list
+            alert('Team deleted successfully');
+            fetchTeams(); // Refresh the team list
+        } catch (err) {
+            setError(err.response?.data?.message || err.message);
+        }
+    };
 
     if (loading) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography>Loading teams...</Typography></Container>;
     if (error) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography color="error">Error: {error}</Typography></Container>;
@@ -54,7 +80,7 @@ const TeamList = () => {
                 <Typography variant="h4" component="h1" gutterBottom color="text.primary">
                     Teams
                 </Typography>
-                {currentUser?.role === 'manager' && (
+                {canManageTeam && (
                     <Button
                         variant="contained"
                         color="primary"
@@ -124,15 +150,25 @@ const TeamList = () => {
                                         </Typography>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Button
-                                            component={Link}
-                                            to={`/teams/${team._id}`}
-                                            size="small"
-                                            color="primary"
-                                            startIcon={<VisibilityIcon />}
-                                        >
-                                            View
-                                        </Button>
+                                        <ButtonGroup size="small">
+                                            <Button
+                                                component={Link}
+                                                to={`/teams/${team._id}`}
+                                                color="primary"
+                                                startIcon={<VisibilityIcon />}
+                                            >
+                                                View
+                                            </Button>
+                                            {canManageTeam && (
+                                                <Button
+                                                    color="error"
+                                                    onClick={() => handleDeleteTeam(team._id, team.name)}
+                                                    startIcon={<DeleteIcon />}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </ButtonGroup>
                                     </TableCell>
                                 </TableRow>
                             ))

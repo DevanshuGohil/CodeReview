@@ -203,6 +203,28 @@ const ProjectDetail = () => {
         }
     };
 
+    // Add deleteProject handler
+    const handleDeleteProject = async () => {
+        if (!canManageProject) {
+            setError("Only managers can delete projects");
+            return;
+        }
+
+        // Show confirmation dialog with project name for clarity
+        if (!window.confirm(`Are you sure you want to delete project "${project.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/projects/${id}`);
+            // Show success message and navigate back to projects list
+            alert('Project deleted successfully');
+            navigate('/projects');
+        } catch (err) {
+            setError(err.response?.data?.message || err.message);
+        }
+    };
+
     if (loading) return <Container maxWidth="lg" sx={{ mt: 4 }}><Typography color="white">Loading project details...</Typography></Container>;
     if (error && !project) return <Container maxWidth="lg" sx={{ mt: 4 }}><Alert severity="error">Error: {error}</Alert></Container>;
     if (!project) return <Container maxWidth="lg" sx={{ mt: 4 }}><Alert severity="warning">Project not found</Alert></Container>;
@@ -315,15 +337,27 @@ const ProjectDetail = () => {
                             </Button>
                         </>
                     ) : (
-                        <Button
-                            component={Link}
-                            to="/projects"
-                            startIcon={<ArrowBackIcon />}
-                            variant="outlined"
-                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}
-                        >
-                            Back to Projects
-                        </Button>
+                        <>
+                            <Button
+                                component={Link}
+                                to="/projects"
+                                startIcon={<ArrowBackIcon />}
+                                variant="outlined"
+                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', mr: 1 }}
+                            >
+                                Back to Projects
+                            </Button>
+                            {canManageProject && (
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    startIcon={<DeleteIcon />}
+                                    onClick={handleDeleteProject}
+                                >
+                                    Delete Project
+                                </Button>
+                            )}
+                        </>
                     )}
                 </Box>
             </Box>

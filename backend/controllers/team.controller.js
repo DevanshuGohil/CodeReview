@@ -2,6 +2,7 @@
 const Team = require('../models/team.model');
 const User = require('../models/user.model');
 const mongoose = require('mongoose');
+const emailService = require('../services/email.service');
 
 exports.createTeam = async (req, res) => {
     try {
@@ -86,13 +87,12 @@ exports.updateTeam = async (req, res) => {
 
 exports.deleteTeam = async (req, res) => {
     try {
-        const team = await Team.findById(req.params.id);
+        // Use findByIdAndDelete instead of remove()
+        const result = await Team.findByIdAndDelete(req.params.id);
 
-        if (!team) {
+        if (!result) {
             return res.status(404).json({ message: 'Team not found' });
         }
-
-        await team.remove();
 
         res.json({ message: 'Team deleted successfully' });
     } catch (error) {
@@ -129,6 +129,9 @@ exports.addMember = async (req, res) => {
         team.updatedAt = Date.now();
 
         await team.save();
+
+        // Send notification email to the user
+        await emailService.sendTeamAdditionEmail(user, team, role || 'member');
 
         // Fetch the updated team with populated user data
         const updatedTeam = await Team.findById(req.params.id)

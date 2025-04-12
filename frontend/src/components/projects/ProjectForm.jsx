@@ -19,7 +19,8 @@ import {
     Divider,
     Card,
     CardContent,
-    CardHeader
+    CardHeader,
+    CircularProgress
 } from '@mui/material';
 
 const ProjectForm = () => {
@@ -31,6 +32,8 @@ const ProjectForm = () => {
     const [githubOwner, setGithubOwner] = useState('');
     const [githubRepo, setGithubRepo] = useState('');
     const [error, setError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
     const { currentUser } = useAuth();
 
@@ -59,6 +62,16 @@ const ProjectForm = () => {
         fetchTeams();
     }, []);
 
+    // Redirect after successful creation
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => {
+                navigate('/projects');
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [success, navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -68,6 +81,15 @@ const ProjectForm = () => {
             return;
         }
 
+        // Validate GitHub repo information
+        if (!githubOwner || !githubRepo) {
+            setError('GitHub repository owner and name are required.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+
         try {
             // Format teams for API
             const formattedTeams = selectedTeams.map(teamId => ({
@@ -76,12 +98,11 @@ const ProjectForm = () => {
             }));
 
             // Format GitHub repo data
-            const githubRepoData = {};
-            if (githubOwner && githubRepo) {
-                githubRepoData.owner = githubOwner;
-                githubRepoData.repo = githubRepo;
-                githubRepoData.url = `https://github.com/${githubOwner}/${githubRepo}`;
-            }
+            const githubRepoData = {
+                owner: githubOwner,
+                repo: githubRepo,
+                url: `https://github.com/${githubOwner}/${githubRepo}`
+            };
 
             await api.post('/projects', {
                 name,
@@ -91,9 +112,11 @@ const ProjectForm = () => {
                 githubRepo: githubRepoData
             });
 
-            navigate('/projects');
+            setSuccess(true);
+            // Redirect will happen via useEffect
         } catch (err) {
             setError(err.response?.data?.message || err.message);
+            setIsSubmitting(false);
         }
     };
 
@@ -143,6 +166,11 @@ const ProjectForm = () => {
             </Typography>
 
             {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+            {success && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                    Project created successfully! Redirecting to projects page...
+                </Alert>
+            )}
 
             <Box component="form" onSubmit={handleSubmit} noValidate>
                 <Grid container spacing={3}>
@@ -299,6 +327,7 @@ const ProjectForm = () => {
                                     <Grid item xs={12} md={6}>
                                         <TextField
                                             fullWidth
+                                            required
                                             id="githubOwner"
                                             label="Repository Owner"
                                             variant="outlined"
@@ -320,6 +349,7 @@ const ProjectForm = () => {
                                     <Grid item xs={12} md={6}>
                                         <TextField
                                             fullWidth
+                                            required
                                             id="githubRepo"
                                             label="Repository Name"
                                             variant="outlined"
@@ -340,7 +370,7 @@ const ProjectForm = () => {
                                     </Grid>
                                 </Grid>
                                 <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
-                                    Optional: Link a GitHub repository to this project for PR reviews and code integration
+                                    Required: Link a GitHub repository to this project for PR reviews and code integration
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -361,6 +391,7 @@ const ProjectForm = () => {
                                     backgroundColor: 'rgba(255, 255, 255, 0.08)'
                                 }
                             }}
+                            disabled={isSubmitting}
                         >
                             Cancel
                         </Button>
@@ -368,6 +399,7 @@ const ProjectForm = () => {
                             type="submit"
                             variant="contained"
                             color="primary"
+                            disabled={isSubmitting || !name || !key || !githubOwner || !githubRepo}
                             sx={{
                                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.4)',
                                 '&:hover': {
@@ -375,7 +407,12 @@ const ProjectForm = () => {
                                 }
                             }}
                         >
-                            Create Project
+                            {isSubmitting ? (
+                                <>
+                                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                                    Creating...
+                                </>
+                            ) : 'Create Project'}
                         </Button>
                     </Grid>
                 </Grid>

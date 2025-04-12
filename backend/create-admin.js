@@ -3,6 +3,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('./models/user.model');
+const emailService = require('./services/email.service');
 
 // Admin user details - you can change these
 const adminUser = {
@@ -62,6 +63,18 @@ const createAdminUser = async () => {
 
         await newAdmin.save();
         console.log('Admin user created successfully');
+
+        // Send welcome email if email service is configured
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+            try {
+                await emailService.sendWelcomeEmail(adminUser, adminUser.password);
+                console.log('Welcome email sent to admin user');
+            } catch (error) {
+                console.error('Failed to send welcome email:', error);
+            }
+        } else {
+            console.log('Email service not configured. Skipping welcome email.');
+        }
     } catch (error) {
         console.error('Failed to create admin user:', error);
     }
