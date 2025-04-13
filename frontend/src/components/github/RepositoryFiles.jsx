@@ -1,6 +1,7 @@
 // components/github/RepositoryFiles.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
+import axios from '../../axiosConfig';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
     Typography,
@@ -99,8 +100,6 @@ const RepositoryFiles = () => {
 
     // Function to view file content
     const handleViewFile = async (file) => {
-        if (file.type !== 'file') return;
-
         setSelectedFile(file);
         setFileLoading(true);
         setFileError(null);
@@ -113,11 +112,22 @@ const RepositoryFiles = () => {
                 return;
             }
 
-            const response = await fetch(file.download_url);
-            const content = await response.text();
-            setFileContent(content);
+            // Use axios instead of fetch
+            const response = await axios.get(file.download_url, {
+                // Use responseType: 'text' to get the raw content
+                responseType: 'text',
+                // This is an external URL, don't use the baseURL from axiosConfig
+                baseURL: '',
+                // Don't include auth token for GitHub raw content
+                headers: {
+                    Authorization: null
+                }
+            });
+
+            // Access the response data directly
+            setFileContent(response.data);
         } catch (err) {
-            setFileError("Failed to load file content: " + (err.message || "Unknown error"));
+            setFileError("Failed to load file content: " + (err.response?.data?.message || err.message || "Unknown error"));
             console.error("Error loading file:", err);
         } finally {
             setFileLoading(false);
