@@ -89,15 +89,46 @@ const PRCommentSection = ({ projectId, pullRequest }) => {
         if (socket && projectId && pullNumber) {
             // Join the PR-specific room when component mounts or when socket reconnects
             socket.emit('join-pr', { projectId, pullNumber });
+            console.log(`Joined PR room: ${projectId}/${pullNumber}`);
 
             // Set up listeners
             socket.on('connect', () => {
                 socket.emit('join-pr', { projectId, pullNumber });
+                console.log(`Reconnected to PR room: ${projectId}/${pullNumber}`);
             });
 
             socket.on('new-comment', (data) => {
+                console.log('Received new comment event:', data);
                 if (data.projectId === projectId && data.pullNumber === parseInt(pullNumber)) {
-                    fetchComments(); // Refresh comments when new one is added
+                    // Check if it's a reply to an existing comment
+                    if (data.comment && data.comment.parentComment) {
+                        console.log('New comment is a reply to:', data.comment.parentComment);
+
+                        // Check if we have already handled this reply locally
+                        const isTrackedReply = window._replyTracker &&
+                            window._replyTracker[data.comment._id] &&
+                            (Date.now() - window._replyTracker[data.comment._id].timestamp < 5000);
+
+                        if (isTrackedReply) {
+                            console.log('Skipping already tracked reply:', data.comment._id);
+                            return;
+                        }
+
+                        // Find the parent comment reference
+                        const parentCommentRef = commentRefs.current[data.comment.parentComment];
+
+                        if (parentCommentRef && parentCommentRef.current) {
+                            console.log('Found parent comment ref, adding reply directly');
+                            // Add reply directly to the parent comment
+                            parentCommentRef.current.addReply(data.comment);
+                        } else {
+                            console.log('Parent comment ref not found, refreshing all comments');
+                            fetchComments(); // Fall back to refreshing all
+                        }
+                    } else {
+                        console.log('Top-level comment added, refreshing all comments');
+                        fetchComments(); // Refresh for top-level comments
+                    }
                 }
             });
 
@@ -111,6 +142,7 @@ const PRCommentSection = ({ projectId, pullRequest }) => {
 
                 // Leave the room when component unmounts
                 socket.emit('leave-pr', { projectId, pullNumber });
+                console.log(`Left PR room: ${projectId}/${pullNumber}`);
             };
         }
     }, [socket, projectId, pullNumber, fetchComments]);
@@ -151,18 +183,43 @@ const PRCommentSection = ({ projectId, pullRequest }) => {
             // Submit comment via API
             const response = await api.post(`/projects/${projectId}/pulls/${pullNumber}/comments`, payload);
 
-            // Clear input
-            setNewComment('');
-
+            // If this was a reply to an existing comment
             if (replyTo) {
+                // Track this reply to avoid duplicates from socket events
+                if (!window._replyTracker) {
+                    window._replyTracker = {};
+                }
+                window._replyTracker[response.data._id] = {
+                    timestamp: Date.now(),
+                    parentId: replyTo
+                };
+
+                // Find the parent comment reference
+                const parentCommentRef = commentRefs.current[replyTo];
+
+                if (parentCommentRef && parentCommentRef.current) {
+                    // Use the ref method to add the reply directly to the parent comment
+                    parentCommentRef.current.addReply(response.data);
+
+                    // Dispatch an event to notify other components about the new reply
+                    const event = new CustomEvent('comment-reply-added', {
+                        detail: {
+                            reply: response.data,
+                            parentId: replyTo
+                        }
+                    });
+                    window.dispatchEvent(event);
+                }
+
                 // Clear reply state
                 setReplyTo(null);
+            } else {
+                // For top-level comments, refresh the comment list
+                await refreshAllComments();
             }
 
-            // Refresh comments to get the latest state including our new comment
-            // This ensures we see our own comment immediately without waiting for the socket
-            await refreshAllComments();
-
+            // Clear input
+            setNewComment('');
             setSubmitting(false);
         } catch (err) {
             console.error('Error submitting comment:', err);

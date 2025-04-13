@@ -38,26 +38,54 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
     const { currentUser } = useAuth();
     const isOwner = currentUser && comment.user && currentUser._id === comment.user._id;
 
+    // Utility function to check if a reply is a duplicate
+    const isDuplicateReply = (replyId) => {
+        // Check in the current replies state
+        const existsInState = replies.some(r => r._id === replyId);
+        if (existsInState) return true;
+
+        // Check in the global tracker
+        if (window._replyTracker && window._replyTracker[replyId]) {
+            const trackedReply = window._replyTracker[replyId];
+            // Only consider it a duplicate if it's recent (within 5 seconds) and for this comment
+            if (trackedReply.parentId === comment._id &&
+                Date.now() - trackedReply.timestamp < 5000) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         addReply: (reply) => {
-            // Add the reply to our list if we're showing replies
-            if (showReplies) {
-                setReplies(prevReplies => [...prevReplies, reply]);
-            } else {
-                // If replies aren't shown, just update the flag and count
-                setHasReplies(true);
-                // Fetch the replies to update count
-                const fetchReplyCount = async () => {
-                    try {
-                        const response = await api.get(`/comments/${comment._id}/replies`);
-                        setReplies(response.data);
-                    } catch (err) {
-                        console.error('Error fetching replies count:', err);
-                    }
-                };
-                fetchReplyCount();
+            console.log(`Adding reply directly to comment ${comment._id}:`, reply);
+
+            // Track this reply to avoid duplicates from socket events
+            if (!window._replyTracker) {
+                window._replyTracker = {};
             }
+            window._replyTracker[reply._id] = {
+                timestamp: Date.now(),
+                parentId: comment._id
+            };
+
+            // Always add the reply and show replies section
+            setReplies(prevReplies => {
+                // Check if reply already exists to avoid duplicates
+                const exists = prevReplies.some(r => r._id === reply._id);
+                console.log(`Reply ${reply._id} already exists in comment ${comment._id}:`, exists);
+
+                if (!exists) {
+                    console.log(`Adding new reply ${reply._id} to comment ${comment._id}`);
+                    return [...prevReplies, reply];
+                }
+                return prevReplies;
+            });
+            setHasReplies(true);
+            // Always show replies when a new reply is added
+            setShowReplies(true);
         }
     }));
 
@@ -95,9 +123,23 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
         const handleReplyAdded = (e) => {
             if (e.detail.parentId === comment._id) {
                 console.log("Reply added event for comment:", comment._id);
-                // Always refresh the replies to ensure we have the latest data
-                loadReplies();
-                // Also make sure the reply section is expanded so the user sees the new reply
+
+                // Skip if this is a duplicate reply
+                if (e.detail.reply && e.detail.reply._id && isDuplicateReply(e.detail.reply._id)) {
+                    console.log(`Skipping duplicate reply ${e.detail.reply._id} for comment ${comment._id}`);
+                    return;
+                }
+
+                // Check if this specific reply is already in our list
+                if (e.detail.reply && e.detail.reply._id) {
+                    // Add the new reply directly to our state if it's not already there
+                    setReplies(prevReplies => [...prevReplies, e.detail.reply]);
+                } else {
+                    // If we don't have the reply details, fall back to loading all replies
+                    loadReplies();
+                }
+
+                // Always make sure the reply section is expanded so the user sees the new reply
                 setShowReplies(true);
                 setHasReplies(true);
             }
@@ -145,7 +187,9 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
     const loadReplies = async () => {
         try {
             setLoadingReplies(true);
+            console.log(`Loading replies for comment ${comment._id}...`);
             const response = await api.get(`/comments/${comment._id}/replies`);
+            console.log(`Received ${response.data.length} replies for comment ${comment._id}:`, response.data);
             setReplies(response.data);
             setHasReplies(response.data.length > 0);
             setLoadingReplies(false);
@@ -575,12 +619,16 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                                     label={replies.length > 0 ? replies.length : '?'}
                                     size="small"
                                     sx={{
-                                        height: 18,
-                                        fontSize: '0.7rem',
-                                        backgroundColor: 'rgba(25, 118, 210, 0.25)',
-                                        ml: -0.5,
-                                        minWidth: 18,
-                                        padding: '0 2px'
+                                        height: 20,
+                                        fontSize: '0.75rem',
+                                        backgroundColor: 'rgba(25, 118, 210, 0.5)',
+                                        color: '#ffffff',
+                                        fontWeight: 'bold',
+                                        borderRadius: '10px',
+                                        minWidth: 20,
+                                        padding: '0 4px',
+                                        ml: 0.5,
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
                                     }}
                                 />
                             )
