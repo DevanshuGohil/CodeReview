@@ -142,6 +142,7 @@ const RepositoryFiles = () => {
             // Use the utility function to fetch raw file content via our proxy
             const response = await api.fetchRawFile(file.download_url);
             setFileContent(response.data);
+            setFileLoading(false);  // Set loading to false after successfully fetching content
 
         } catch (err) {
             console.error('Error fetching file content:', err);
@@ -334,10 +335,14 @@ const RepositoryFiles = () => {
                         files.map((file, index) => (
                             <React.Fragment key={index}>
                                 <ListItem
-                                    button={file.type === 'dir'}
-                                    onClick={file.type === 'dir' ? () => navigateToFolder(file.path) : undefined}
+                                    component="div"
+                                    onClick={file.type === 'dir' ?
+                                        () => navigateToFolder(file.path) :
+                                        () => handleViewFile(file)
+                                    }
                                     sx={{
-                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     <ListItemIcon>
