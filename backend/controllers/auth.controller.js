@@ -36,8 +36,11 @@ exports.register = async (req, res) => {
         const { username, email, password, firstName, lastName } = req.body;
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-        // Check if user already exists
-        let user = await User.findOne({ email });
+        // Convert email to lowercase for case-insensitive comparison
+        const emailLowercase = email.toLowerCase();
+
+        // Check if user already exists (case insensitive email check)
+        let user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
 
         if (user) {
             console.log(`[${new Date().toISOString()}] Registration failed - Email already exists: ${email} from IP: ${ip}`);
@@ -62,10 +65,10 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Create new user
+        // Create new user with lowercase email
         user = new User({
             username,
-            email,
+            email: emailLowercase, // Store email in lowercase
             password,
             firstName,
             lastName,
@@ -94,15 +97,15 @@ exports.register = async (req, res) => {
         const userResponse = await User.findById(user.id).select('-password');
 
         // Log successful registration
-        console.log(`[${new Date().toISOString()}] New user registered: ${username} (${email}), ID: ${user.id}, IP: ${ip}`);
+        console.log(`[${new Date().toISOString()}] New user registered: ${username} (${emailLowercase}), ID: ${user.id}, IP: ${ip}`);
 
         // Send welcome email
         if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
             try {
                 await emailService.sendWelcomeEmail(user);
-                console.log(`Welcome email sent to ${email}`);
+                console.log(`Welcome email sent to ${emailLowercase}`);
             } catch (err) {
-                console.error(`Failed to send welcome email to ${email}:`, err);
+                console.error(`Failed to send welcome email to ${emailLowercase}:`, err);
                 // Don't fail registration if email fails
             }
         }
@@ -124,11 +127,11 @@ exports.login = async (req, res) => {
         // Get IP address from request
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-        // Check if user exists
+        // Check if user exists - using case-insensitive email matching
         const user = await User.findOne({
             $or: [
                 { username },
-                { email: username }
+                { email: { $regex: new RegExp(`^${username}$`, 'i') } } // Case insensitive email match
             ]
         });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -79,7 +79,7 @@ const MemberList = () => {
         try {
             setLoading(true);
             setError('');
-            const response = await api.get('/admin/users');
+            const response = await api.get('/users');
             setUsers(response.data);
             setFilteredUsers(response.data);
         } catch (err) {
@@ -119,8 +119,9 @@ const MemberList = () => {
         setPage(0);
     }, [searchQuery, users]);
 
-    useEffect(() => {
-        const sortedUsers = [...filteredUsers].sort((a, b) => {
+    // Sort users using useMemo to avoid unnecessary recalculations
+    const sortedUsers = useMemo(() => {
+        return [...filteredUsers].sort((a, b) => {
             let aValue, bValue;
 
             switch (orderBy) {
@@ -155,9 +156,7 @@ const MemberList = () => {
                 return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
             }
         });
-
-        setFilteredUsers(sortedUsers);
-    }, [order, orderBy]);
+    }, [filteredUsers, order, orderBy]);
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
@@ -168,7 +167,7 @@ const MemberList = () => {
         setPage(0);
     };
 
-    const handleRequestSort = (property) => () => {
+    const handleRequestSort = (property) => {
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
         setOrderBy(property);
@@ -194,7 +193,7 @@ const MemberList = () => {
     const handleEditSubmit = async () => {
         try {
             setProcessing(true);
-            const response = await api.put(`/admin/users/${selectedUser._id}`, {
+            const response = await api.put(`/users/${selectedUser._id}`, {
                 role: formData.role
             });
 
@@ -219,7 +218,7 @@ const MemberList = () => {
     const handleDeleteSubmit = async () => {
         try {
             setProcessing(true);
-            const response = await api.delete(`/admin/users/${selectedUser._id}`);
+            const response = await api.delete(`/users/${selectedUser._id}`);
 
             if (response.status === 200) {
                 const updatedUsers = users.filter(user => user._id !== selectedUser._id);
@@ -354,43 +353,7 @@ const MemberList = () => {
         }
     };
 
-    // Sort and paginate users
-    const sortedUsers = [...filteredUsers].sort((a, b) => {
-        let aValue, bValue;
-
-        switch (orderBy) {
-            case 'name':
-                aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
-                bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
-                break;
-            case 'email':
-                aValue = a.email.toLowerCase();
-                bValue = b.email.toLowerCase();
-                break;
-            case 'username':
-                aValue = a.username.toLowerCase();
-                bValue = b.username.toLowerCase();
-                break;
-            case 'role':
-                aValue = (a.role || 'developer').toLowerCase();
-                bValue = (b.role || 'developer').toLowerCase();
-                break;
-            case 'createdAt':
-                aValue = new Date(a.createdAt || 0).getTime();
-                bValue = new Date(b.createdAt || 0).getTime();
-                break;
-            default:
-                aValue = a[orderBy];
-                bValue = b[orderBy];
-        }
-
-        if (order === 'asc') {
-            return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-        } else {
-            return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
-        }
-    });
-
+    // Paginate users
     const paginatedUsers = sortedUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     if (loading) {
@@ -482,22 +445,23 @@ const MemberList = () => {
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                                     py: 2
                                 }}
-                                onClick={createSortHandler('name')}
-                                style={{ cursor: 'pointer' }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TableSortLabel
+                                    active={orderBy === 'name'}
+                                    direction={orderBy === 'name' ? order : 'asc'}
+                                    onClick={createSortHandler('name')}
+                                    sx={{
+                                        color: 'white',
+                                        '&.MuiTableSortLabel-active': {
+                                            color: '#90caf9',
+                                        },
+                                        '& .MuiTableSortLabel-icon': {
+                                            color: 'white !important',
+                                        },
+                                    }}
+                                >
                                     Name
-                                    {orderBy === 'name' && (
-                                        <ArrowUpwardIcon
-                                            sx={{
-                                                ml: 0.5,
-                                                fontSize: '0.9rem',
-                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    )}
-                                </Box>
+                                </TableSortLabel>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -505,22 +469,23 @@ const MemberList = () => {
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                                     py: 2
                                 }}
-                                onClick={createSortHandler('username')}
-                                style={{ cursor: 'pointer' }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TableSortLabel
+                                    active={orderBy === 'username'}
+                                    direction={orderBy === 'username' ? order : 'asc'}
+                                    onClick={createSortHandler('username')}
+                                    sx={{
+                                        color: 'white',
+                                        '&.MuiTableSortLabel-active': {
+                                            color: '#90caf9',
+                                        },
+                                        '& .MuiTableSortLabel-icon': {
+                                            color: 'white !important',
+                                        },
+                                    }}
+                                >
                                     Username
-                                    {orderBy === 'username' && (
-                                        <ArrowUpwardIcon
-                                            sx={{
-                                                ml: 0.5,
-                                                fontSize: '0.9rem',
-                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    )}
-                                </Box>
+                                </TableSortLabel>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -528,22 +493,23 @@ const MemberList = () => {
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                                     py: 2
                                 }}
-                                onClick={createSortHandler('email')}
-                                style={{ cursor: 'pointer' }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TableSortLabel
+                                    active={orderBy === 'email'}
+                                    direction={orderBy === 'email' ? order : 'asc'}
+                                    onClick={createSortHandler('email')}
+                                    sx={{
+                                        color: 'white',
+                                        '&.MuiTableSortLabel-active': {
+                                            color: '#90caf9',
+                                        },
+                                        '& .MuiTableSortLabel-icon': {
+                                            color: 'white !important',
+                                        },
+                                    }}
+                                >
                                     Email
-                                    {orderBy === 'email' && (
-                                        <ArrowUpwardIcon
-                                            sx={{
-                                                ml: 0.5,
-                                                fontSize: '0.9rem',
-                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    )}
-                                </Box>
+                                </TableSortLabel>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -551,22 +517,23 @@ const MemberList = () => {
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                                     py: 2
                                 }}
-                                onClick={createSortHandler('role')}
-                                style={{ cursor: 'pointer' }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TableSortLabel
+                                    active={orderBy === 'role'}
+                                    direction={orderBy === 'role' ? order : 'asc'}
+                                    onClick={createSortHandler('role')}
+                                    sx={{
+                                        color: 'white',
+                                        '&.MuiTableSortLabel-active': {
+                                            color: '#90caf9',
+                                        },
+                                        '& .MuiTableSortLabel-icon': {
+                                            color: 'white !important',
+                                        },
+                                    }}
+                                >
                                     Role
-                                    {orderBy === 'role' && (
-                                        <ArrowUpwardIcon
-                                            sx={{
-                                                ml: 0.5,
-                                                fontSize: '0.9rem',
-                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    )}
-                                </Box>
+                                </TableSortLabel>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -574,22 +541,23 @@ const MemberList = () => {
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                                     py: 2
                                 }}
-                                onClick={createSortHandler('createdAt')}
-                                style={{ cursor: 'pointer' }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TableSortLabel
+                                    active={orderBy === 'createdAt'}
+                                    direction={orderBy === 'createdAt' ? order : 'asc'}
+                                    onClick={createSortHandler('createdAt')}
+                                    sx={{
+                                        color: 'white',
+                                        '&.MuiTableSortLabel-active': {
+                                            color: '#90caf9',
+                                        },
+                                        '& .MuiTableSortLabel-icon': {
+                                            color: 'white !important',
+                                        },
+                                    }}
+                                >
                                     Created At
-                                    {orderBy === 'createdAt' && (
-                                        <ArrowUpwardIcon
-                                            sx={{
-                                                ml: 0.5,
-                                                fontSize: '0.9rem',
-                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    )}
-                                </Box>
+                                </TableSortLabel>
                             </TableCell>
                             <TableCell
                                 align="right"

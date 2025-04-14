@@ -22,4 +22,12 @@ const UserSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// Pre-save hook to ensure email is always stored in lowercase
+UserSchema.pre('save', function (next) {
+    if (this.email) {
+        this.email = this.email.toLowerCase();
+    }
+    next();
+});
+
 module.exports = mongoose.model('User', UserSchema);
