@@ -4,6 +4,7 @@ import api from '../../axiosConfig';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import TeamSelector from '../teams/TeamSelector';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../common/SnackbarProvider';
 import {
     Container,
     Typography,
@@ -31,7 +32,12 @@ import {
     Stack,
     IconButton,
     Tooltip,
-    alpha
+    alpha,
+    CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import {
     Delete as DeleteIcon,
@@ -53,6 +59,7 @@ const ProjectDetail = () => {
     const [selectedTeam, setSelectedTeam] = useState('');
     const [githubOwner, setGithubOwner] = useState('');
     const [githubRepo, setGithubRepo] = useState('');
+    const [addingTeam, setAddingTeam] = useState(false);
 
     // Add project editing state
     const [isEditing, setIsEditing] = useState(false);
@@ -60,9 +67,15 @@ const ProjectDetail = () => {
     const [editDescription, setEditDescription] = useState('');
     const [successMessage, setSuccessMessage] = useState(null);
 
+    // Dialog states
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [removeTeamDialogOpen, setRemoveTeamDialogOpen] = useState(false);
+    const [teamToRemove, setTeamToRemove] = useState(null);
+
     const { id } = useParams();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const { showSuccess, showError } = useSnackbar();
 
     // Check if user is a manager (can manage project)
     const canManageProject = currentUser?.role === 'manager';
@@ -145,6 +158,7 @@ const ProjectDetail = () => {
         }
 
         try {
+            setAddingTeam(true);
             await api.post(`/projects/${id}/teams`, {
                 team: selectedTeam,
                 accessLevel: 'read'
@@ -155,19 +169,22 @@ const ProjectDetail = () => {
             setProject(updatedProjectResponse.data);
 
             setSelectedTeam('');
+            setSuccessMessage('Team added successfully!');
+
+            // Clear success message after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage(null);
+            }, 3000);
         } catch (err) {
             setError(err.response?.data?.message || err.message);
+        } finally {
+            setAddingTeam(false);
         }
     };
 
     const handleRemoveTeam = async (teamId, teamName) => {
         if (!canManageProject) {
-            setError("Only managers can remove teams from projects");
-            return;
-        }
-
-        // Show confirmation dialog
-        if (!window.confirm(`Are you sure you want to remove ${teamName} from this project?`)) {
+            showError("Only managers can remove teams from projects");
             return;
         }
 
@@ -177,9 +194,19 @@ const ProjectDetail = () => {
             // Fetch the updated project to ensure we have all data including populated team details
             const updatedProjectResponse = await api.get(`/projects/${id}`);
             setProject(updatedProjectResponse.data);
+            showSuccess(`Team "${teamName}" has been removed from the project`);
+            setRemoveTeamDialogOpen(false);
+            setTeamToRemove(null);
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
+            setRemoveTeamDialogOpen(false);
+            setTeamToRemove(null);
         }
+    };
+
+    const openRemoveTeamDialog = (team) => {
+        setTeamToRemove(team);
+        setRemoveTeamDialogOpen(true);
     };
 
     const handleUpdateGithubRepo = async (e) => {
@@ -206,22 +233,16 @@ const ProjectDetail = () => {
     // Add deleteProject handler
     const handleDeleteProject = async () => {
         if (!canManageProject) {
-            setError("Only managers can delete projects");
-            return;
-        }
-
-        // Show confirmation dialog with project name for clarity
-        if (!window.confirm(`Are you sure you want to delete project "${project.name}"? This action cannot be undone.`)) {
+            showError("Only managers can delete projects");
             return;
         }
 
         try {
             await api.delete(`/projects/${id}`);
-            // Show success message and navigate back to projects list
-            alert('Project deleted successfully');
+            showSuccess('Project deleted successfully');
             navigate('/projects');
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
         }
     };
 
@@ -352,7 +373,7 @@ const ProjectDetail = () => {
                                     variant="outlined"
                                     color="error"
                                     startIcon={<DeleteIcon />}
-                                    onClick={handleDeleteProject}
+                                    onClick={() => setDeleteDialogOpen(true)}
                                 >
                                     Delete Project
                                 </Button>
@@ -437,10 +458,7 @@ const ProjectDetail = () => {
                                                     <IconButton
                                                         size="small"
                                                         color="error"
-                                                        onClick={() => handleRemoveTeam(
-                                                            teamData.team._id,
-                                                            teamData.team.name
-                                                        )}
+                                                        onClick={() => openRemoveTeamDialog(teamData.team)}
                                                     >
                                                         <DeleteIcon />
                                                     </IconButton>
@@ -461,25 +479,27 @@ const ProjectDetail = () => {
                     {canManageProject && (
                         <>
                             <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
-                            <Box component="form" onSubmit={handleAddTeam}>
+                            <Box component="form" onSubmit={handleAddTeam} sx={{ width: '100%' }}>
                                 <Typography variant="h6" gutterBottom color="white">Add Team</Typography>
                                 <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={12} md={8}>
+                                    <Grid item xs={12} md={9}>
                                         <TeamSelector
                                             value={selectedTeam}
                                             onChange={setSelectedTeam}
                                             excludeTeams={project.teams.map(t => t.team._id)}
+                                            sx={{ width: '100%', minWidth: '300px' }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
+                                    <Grid item xs={12} md={3}>
                                         <Button
                                             type="submit"
                                             variant="contained"
                                             color="primary"
-                                            disabled={!selectedTeam}
+                                            disabled={!selectedTeam || addingTeam}
                                             fullWidth
+                                            startIcon={addingTeam ? <CircularProgress size={20} color="inherit" /> : null}
                                         >
-                                            Add Team
+                                            {addingTeam ? 'Adding...' : 'Add Team'}
                                         </Button>
                                     </Grid>
                                 </Grid>
@@ -636,6 +656,74 @@ const ProjectDetail = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Project Deletion
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to delete project "{project?.name}"? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteProject}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Remove Team Confirmation Dialog */}
+            <Dialog
+                open={removeTeamDialogOpen}
+                onClose={() => setRemoveTeamDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Team Removal
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to remove team "{teamToRemove?.name}" from this project?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setRemoveTeamDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => handleRemoveTeam(teamToRemove?._id, teamToRemove?.name)}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Remove
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

@@ -1,5 +1,5 @@
 // components/auth/Register.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -12,9 +12,11 @@ import {
     Alert,
     Grid,
     CircularProgress,
-    Link as MuiLink
+    Link as MuiLink,
+    FormHelperText,
+    LinearProgress
 } from '@mui/material';
-import { PersonAdd as PersonAddIcon } from '@mui/icons-material';
+import { PersonAdd as PersonAddIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from '@mui/icons-material';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -27,10 +29,52 @@ const Register = () => {
     });
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [passwordValidation, setPasswordValidation] = useState({
+        length: false,
+        special: false,
+        number: false,
+        alphabet: false,
+        strength: 0
+    });
     const { register, setUser } = useAuth();
     const navigate = useNavigate();
 
     const { username, email, password, confirmPassword, firstName, lastName } = formData;
+
+    // Password validation
+    useEffect(() => {
+        const hasLength = password.length >= 8;
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasAlphabet = /[a-zA-Z]/.test(password);
+
+        // Calculate password strength (0-100)
+        let strength = 0;
+        if (password.length > 0) {
+            // Base points for length
+            strength += Math.min(password.length * 5, 40);
+
+            // Points for character variety
+            if (hasSpecial) strength += 20;
+            if (hasNumber) strength += 20;
+            if (hasAlphabet) strength += 20;
+        }
+
+        setPasswordValidation({
+            length: hasLength,
+            special: hasSpecial,
+            number: hasNumber,
+            alphabet: hasAlphabet,
+            strength
+        });
+    }, [password]);
+
+    // Password strength color
+    const getStrengthColor = (strength) => {
+        if (strength < 30) return '#f44336'; // Red
+        if (strength < 60) return '#ff9800'; // Orange
+        return '#4caf50'; // Green
+    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -39,6 +83,14 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+
+        // Check password validation
+        const { length, special, number, alphabet } = passwordValidation;
+        if (!length || !special || !number || !alphabet) {
+            setError('Password does not meet the requirements');
+            setLoading(false);
+            return;
+        }
 
         if (password !== confirmPassword) {
             setError('Passwords do not match');
@@ -58,10 +110,31 @@ const Register = () => {
             setUser(response.data.user);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to register');
+            if (err.response?.data?.errors) {
+                // Display password validation errors from server
+                setError(
+                    <div>
+                        <p>{err.response.data.message}</p>
+                        <ul style={{ marginTop: '10px', paddingLeft: '20px' }}>
+                            {err.response.data.errors.map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            } else {
+                setError(err.response?.data?.message || 'Failed to register');
+            }
             setLoading(false);
         }
     };
+
+    // Render validation icon
+    const ValidationIcon = ({ isValid }) => (
+        isValid
+            ? <CheckCircleIcon fontSize="small" sx={{ color: '#4caf50', ml: 1 }} />
+            : <CancelIcon fontSize="small" sx={{ color: '#f44336', ml: 1 }} />
+    );
 
     return (
         <Container maxWidth="sm">
@@ -166,8 +239,61 @@ const Register = () => {
                             autoComplete="new-password"
                             value={password}
                             onChange={handleChange}
-                            inputProps={{ minLength: 6 }}
+                            error={password.length > 0 && !passwordValidation.length}
                         />
+
+                        {/* Password validation indicators */}
+                        {password.length > 0 && (
+                            <Box sx={{ mt: 1, mb: 2 }}>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={passwordValidation.strength}
+                                    sx={{
+                                        mb: 1,
+                                        height: 8,
+                                        borderRadius: 5,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            backgroundColor: getStrengthColor(passwordValidation.strength)
+                                        }
+                                    }}
+                                />
+
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Password must have:
+                                </Typography>
+
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            At least 8 characters
+                                        </Typography>
+                                        <ValidationIcon isValid={passwordValidation.length} />
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            At least one special character (e.g., !@#$%^&*)
+                                        </Typography>
+                                        <ValidationIcon isValid={passwordValidation.special} />
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            At least one number
+                                        </Typography>
+                                        <ValidationIcon isValid={passwordValidation.number} />
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            At least one letter
+                                        </Typography>
+                                        <ValidationIcon isValid={passwordValidation.alphabet} />
+                                    </Box>
+                                </Box>
+                            </Box>
+                        )}
 
                         <TextField
                             margin="normal"
@@ -180,7 +306,8 @@ const Register = () => {
                             autoComplete="new-password"
                             value={confirmPassword}
                             onChange={handleChange}
-                            inputProps={{ minLength: 6 }}
+                            error={confirmPassword.length > 0 && password !== confirmPassword}
+                            helperText={confirmPassword.length > 0 && password !== confirmPassword ? "Passwords don't match" : ""}
                             sx={{ mb: 3 }}
                         />
 
@@ -188,7 +315,7 @@ const Register = () => {
                             type="submit"
                             fullWidth
                             variant="contained"
-                            disabled={loading}
+                            disabled={loading || !passwordValidation.length || !passwordValidation.special || !passwordValidation.number || !passwordValidation.alphabet || password !== confirmPassword}
                             startIcon={loading ? <CircularProgress size={20} /> : <PersonAddIcon />}
                             sx={{ py: 1.5 }}
                         >

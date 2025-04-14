@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Container,
-    Paper,
+    Box,
     Typography,
     Table,
     TableBody,
@@ -12,7 +11,6 @@ import {
     Chip,
     Alert,
     Skeleton,
-    Box,
     IconButton,
     Tooltip,
     Dialog,
@@ -27,7 +25,10 @@ import {
     Stack,
     TextField,
     CircularProgress,
-    Snackbar
+    InputAdornment,
+    TablePagination,
+    TableSortLabel,
+    Grid
 } from '@mui/material';
 import {
     Person as PersonIcon,
@@ -37,12 +38,18 @@ import {
     Engineering as EngineerIcon,
     SupervisorAccount as ManagerIcon,
     Upload as UploadIcon,
-    FileUpload as FileUploadIcon
+    FileUpload as FileUploadIcon,
+    Search as SearchIcon,
+    ArrowUpward as ArrowUpwardIcon,
+    KeyboardArrowLeft as KeyboardArrowLeftIcon,
+    KeyboardArrowRight as KeyboardArrowRightIcon
 } from '@mui/icons-material';
 import api from '../../axiosConfig';
+import { useSnackbar } from '../../components/common/SnackbarProvider';
 
 const MemberList = () => {
     const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [openEditModal, setOpenEditModal] = useState(false);
@@ -60,25 +67,115 @@ const MemberList = () => {
     });
     const [processing, setProcessing] = useState(false);
     const [importResult, setImportResult] = useState(null);
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [orderBy, setOrderBy] = useState('name');
+    const [order, setOrder] = useState('asc');
     const fileInputRef = useRef(null);
+    const { showSuccess, showError } = useSnackbar();
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await api.get('/users');
+            setError('');
+            const response = await api.get('/admin/users');
             setUsers(response.data);
-            setError(null);
+            setFilteredUsers(response.data);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch users');
+            console.error('Error fetching users:', err);
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch users';
+            setError(errorMessage);
+            showError(`Failed to fetch users: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
+    }, [showError]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    useEffect(() => {
+        if (!users.length) {
+            setFilteredUsers([]);
+            return;
+        }
+
+        if (!searchQuery.trim()) {
+            setFilteredUsers([...users]);
+            return;
+        }
+
+        const query = searchQuery.toLowerCase().trim();
+        const filtered = users.filter(user =>
+            `${user.firstName} ${user.lastName}`.toLowerCase().includes(query) ||
+            user.email.toLowerCase().includes(query) ||
+            user.username.toLowerCase().includes(query) ||
+            (user.role || 'developer').toLowerCase().includes(query)
+        );
+
+        setFilteredUsers(filtered);
+        setPage(0);
+    }, [searchQuery, users]);
+
+    useEffect(() => {
+        const sortedUsers = [...filteredUsers].sort((a, b) => {
+            let aValue, bValue;
+
+            switch (orderBy) {
+                case 'name':
+                    aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+                    bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+                    break;
+                case 'email':
+                    aValue = a.email.toLowerCase();
+                    bValue = b.email.toLowerCase();
+                    break;
+                case 'username':
+                    aValue = a.username.toLowerCase();
+                    bValue = b.username.toLowerCase();
+                    break;
+                case 'role':
+                    aValue = (a.role || 'developer').toLowerCase();
+                    bValue = (b.role || 'developer').toLowerCase();
+                    break;
+                case 'createdAt':
+                    aValue = new Date(a.createdAt || 0).getTime();
+                    bValue = new Date(b.createdAt || 0).getTime();
+                    break;
+                default:
+                    aValue = a[orderBy];
+                    bValue = b[orderBy];
+            }
+
+            if (order === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
+            }
+        });
+
+        setFilteredUsers(sortedUsers);
+    }, [order, orderBy]);
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    const handleRequestSort = (property) => () => {
+        const isAsc = orderBy === property && order === 'asc';
+        setOrder(isAsc ? 'desc' : 'asc');
+        setOrderBy(property);
+    };
+
+    const createSortHandler = (property) => () => {
+        handleRequestSort(property);
     };
 
     const handleEditClick = (user) => {
@@ -96,21 +193,47 @@ const MemberList = () => {
 
     const handleEditSubmit = async () => {
         try {
-            await api.put(`/users/${selectedUser._id}/role`, { role: formData.role });
-            fetchUsers();
-            setOpenEditModal(false);
+            setProcessing(true);
+            const response = await api.put(`/admin/users/${selectedUser._id}`, {
+                role: formData.role
+            });
+
+            if (response.status === 200) {
+                const updatedUsers = users.map(user =>
+                    user._id === selectedUser._id ? { ...user, role: formData.role } : user
+                );
+                setUsers(updatedUsers);
+
+                showSuccess(`Successfully updated role for ${selectedUser.firstName} ${selectedUser.lastName}`);
+                setOpenEditModal(false);
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update user role');
+            console.error('Error updating user:', err);
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to update user';
+            showError(`Failed to update user: ${errorMessage}`);
+        } finally {
+            setProcessing(false);
         }
     };
 
     const handleDeleteSubmit = async () => {
         try {
-            await api.delete(`/users/${selectedUser._id}`);
-            fetchUsers();
-            setOpenDeleteModal(false);
+            setProcessing(true);
+            const response = await api.delete(`/admin/users/${selectedUser._id}`);
+
+            if (response.status === 200) {
+                const updatedUsers = users.filter(user => user._id !== selectedUser._id);
+                setUsers(updatedUsers);
+
+                showSuccess(`Successfully deleted ${selectedUser.firstName} ${selectedUser.lastName}`);
+                setOpenDeleteModal(false);
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete user');
+            console.error('Error deleting user:', err);
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to delete user';
+            showError(`Failed to delete user: ${errorMessage}`);
+        } finally {
+            setProcessing(false);
         }
     };
 
@@ -152,14 +275,12 @@ const MemberList = () => {
 
     const handleImportSubmit = async () => {
         if (!importData.csvFile) {
-            setSnackbarMessage('Please select a CSV file to import');
-            setSnackbarOpen(true);
+            showError('Please select a CSV file to import');
             return;
         }
 
         if (!importData.adminPassword || !importData.managerPassword || !importData.developerPassword) {
-            setSnackbarMessage('Please provide passwords for all role types');
-            setSnackbarOpen(true);
+            showError('Please provide passwords for all role types');
             return;
         }
 
@@ -173,7 +294,6 @@ const MemberList = () => {
             formData.append('managerPassword', importData.managerPassword);
             formData.append('developerPassword', importData.developerPassword);
 
-            // Log the FormData keys for debugging
             console.log('FormData keys:', [...formData.keys()]);
 
             const response = await api.post('/users/import', formData, {
@@ -186,10 +306,8 @@ const MemberList = () => {
                 console.log('Import successful:', response.data);
                 setImportResult(response.data);
                 fetchUsers();
-                setSnackbarMessage(`Successfully imported ${response.data.success} users`);
-                setSnackbarOpen(true);
+                showSuccess(`Successfully imported ${response.data.success} users`);
 
-                // Close modal after successful import
                 if (response.data.success > 0 && response.data.errors.length === 0) {
                     setTimeout(() => {
                         setOpenImportModal(false);
@@ -202,10 +320,8 @@ const MemberList = () => {
             console.error('Import error:', err);
             const errorMessage = err.response?.data?.message || err.message || 'Failed to import users';
             setError(errorMessage);
-            setSnackbarMessage(`Failed to import users: ${errorMessage}`);
-            setSnackbarOpen(true);
+            showError(`Failed to import users: ${errorMessage}`);
 
-            // Set empty import result with error information
             setImportResult({
                 success: 0,
                 total: 0,
@@ -214,10 +330,6 @@ const MemberList = () => {
         } finally {
             setProcessing(false);
         }
-    };
-
-    const handleCloseSnackbar = () => {
-        setSnackbarOpen(false);
     };
 
     const getRoleIcon = (role) => {
@@ -234,97 +346,316 @@ const MemberList = () => {
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
-                return 'secondary';
+                return '#9c27b0';
             case 'manager':
-                return 'primary';
+                return '#2196f3';
             default:
-                return 'default';
+                return '#757575';
         }
     };
 
+    // Sort and paginate users
+    const sortedUsers = [...filteredUsers].sort((a, b) => {
+        let aValue, bValue;
+
+        switch (orderBy) {
+            case 'name':
+                aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+                bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+                break;
+            case 'email':
+                aValue = a.email.toLowerCase();
+                bValue = b.email.toLowerCase();
+                break;
+            case 'username':
+                aValue = a.username.toLowerCase();
+                bValue = b.username.toLowerCase();
+                break;
+            case 'role':
+                aValue = (a.role || 'developer').toLowerCase();
+                bValue = (b.role || 'developer').toLowerCase();
+                break;
+            case 'createdAt':
+                aValue = new Date(a.createdAt || 0).getTime();
+                bValue = new Date(b.createdAt || 0).getTime();
+                break;
+            default:
+                aValue = a[orderBy];
+                bValue = b[orderBy];
+        }
+
+        if (order === 'asc') {
+            return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+            return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
+        }
+    });
+
+    const paginatedUsers = sortedUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
     if (loading) {
         return (
-            <Container maxWidth="lg" sx={{ mt: 4 }}>
-                <Skeleton variant="rectangular" height={400} />
-            </Container>
+            <Box sx={{ p: 3, color: 'white' }}>
+                <Skeleton variant="rectangular" height={400} sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
+            </Box>
         );
     }
 
     if (error) {
         return (
-            <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Box sx={{ p: 3 }}>
                 <Alert severity="error">{error}</Alert>
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
-            <Paper
-                elevation={2}
-                sx={{
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    bgcolor: 'background.paper',
-                    border: 1,
-                    borderColor: 'divider'
-                }}
-            >
-                <Box sx={{
-                    p: 2,
-                    bgcolor: 'primary.dark',
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <Typography variant="h5" sx={{ color: 'primary.contrastText' }}>
-                        Member Management
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        startIcon={<UploadIcon />}
-                        onClick={handleImportClick}
-                        sx={{ bgcolor: 'primary.light' }}
-                    >
-                        Import Users
-                    </Button>
-                </Box>
+        <Box sx={{ p: 3, maxWidth: '100%', bgcolor: '#161616', minHeight: '100vh' }}>
+            <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 3
+            }}>
+                <Typography variant="h4" component="h1" sx={{ color: 'white', fontSize: '2.5rem', fontWeight: 400 }}>
+                    Member Management
+                </Typography>
+                <Button
+                    variant="contained"
+                    startIcon={<UploadIcon />}
+                    onClick={handleImportClick}
+                    sx={{
+                        borderRadius: 2,
+                        bgcolor: '#2196f3',
+                        px: 3,
+                        py: 1
+                    }}
+                >
+                    Import Users
+                </Button>
+            </Box>
 
-                <TableContainer>
-                    <Table>
-                        <TableHead>
+            <Box sx={{ display: 'flex', mb: 4, gap: 2, alignItems: 'center' }}>
+                <Box
+                    sx={{
+                        position: 'relative',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: 1,
+                        px: 2,
+                        py: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: 300,
+                        maxWidth: '100%',
+                        bgcolor: 'rgba(0, 0, 0, 0.2)'
+                    }}
+                >
+                    <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.5)', mr: 1 }} />
+                    <input
+                        type="text"
+                        placeholder="Search members by name, email, or role..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'white',
+                            width: '100%',
+                            outline: 'none',
+                            padding: '8px 0',
+                            fontSize: '1rem'
+                        }}
+                    />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    {filteredUsers.length} members found
+                </Typography>
+            </Box>
+
+            <Box sx={{ mb: 3, bgcolor: '#1e1e1e', borderRadius: 1, overflow: 'hidden' }}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                                onClick={createSortHandler('name')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Name
+                                    {orderBy === 'name' && (
+                                        <ArrowUpwardIcon
+                                            sx={{
+                                                ml: 0.5,
+                                                fontSize: '0.9rem',
+                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </TableCell>
+                            <TableCell
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                                onClick={createSortHandler('username')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Username
+                                    {orderBy === 'username' && (
+                                        <ArrowUpwardIcon
+                                            sx={{
+                                                ml: 0.5,
+                                                fontSize: '0.9rem',
+                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </TableCell>
+                            <TableCell
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                                onClick={createSortHandler('email')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Email
+                                    {orderBy === 'email' && (
+                                        <ArrowUpwardIcon
+                                            sx={{
+                                                ml: 0.5,
+                                                fontSize: '0.9rem',
+                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </TableCell>
+                            <TableCell
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                                onClick={createSortHandler('role')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Role
+                                    {orderBy === 'role' && (
+                                        <ArrowUpwardIcon
+                                            sx={{
+                                                ml: 0.5,
+                                                fontSize: '0.9rem',
+                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </TableCell>
+                            <TableCell
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                                onClick={createSortHandler('createdAt')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Created At
+                                    {orderBy === 'createdAt' && (
+                                        <ArrowUpwardIcon
+                                            sx={{
+                                                ml: 0.5,
+                                                fontSize: '0.9rem',
+                                                transform: order === 'desc' ? 'rotate(180deg)' : 'rotate(0)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </TableCell>
+                            <TableCell
+                                align="right"
+                                sx={{
+                                    color: 'white',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                    py: 2
+                                }}
+                            >
+                                Actions
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {paginatedUsers.length === 0 ? (
                             <TableRow>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Username</TableCell>
-                                <TableCell>Email</TableCell>
-                                <TableCell>Role</TableCell>
-                                <TableCell align="right">Actions</TableCell>
+                                <TableCell colSpan={5} align="center" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                    No users found
+                                </TableCell>
                             </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {users.map((user) => (
-                                <TableRow key={user._id}>
-                                    <TableCell>
+                        ) : (
+                            paginatedUsers.map((user) => (
+                                <TableRow
+                                    key={user._id}
+                                    sx={{
+                                        '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' },
+                                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                                    }}
+                                >
+                                    <TableCell sx={{ color: 'white', py: 2 }}>
                                         {user.firstName} {user.lastName}
                                     </TableCell>
-                                    <TableCell>{user.username}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ color: 'white', py: 2 }}>{user.username}</TableCell>
+                                    <TableCell sx={{ color: 'white', py: 2 }}>{user.email}</TableCell>
+                                    <TableCell sx={{ color: 'white', py: 2 }}>
                                         <Chip
                                             icon={getRoleIcon(user.role)}
                                             label={user.role || 'developer'}
-                                            color={getRoleColor(user.role)}
+                                            sx={{
+                                                bgcolor: `${getRoleColor(user.role)}20`,
+                                                color: getRoleColor(user.role),
+                                                borderRadius: '15px'
+                                            }}
                                             size="small"
                                         />
                                     </TableCell>
-                                    <TableCell align="right">
+                                    <TableCell sx={{ color: 'white', py: 2 }}>
+                                        {user.createdAt ? (
+                                            new Date(user.createdAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })
+                                        ) : (
+                                            'N/A'
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ py: 2 }}>
                                         <Stack direction="row" spacing={1} justifyContent="flex-end">
                                             <Tooltip title="Change Role">
                                                 <IconButton
                                                     onClick={() => handleEditClick(user)}
-                                                    color="primary"
+                                                    sx={{
+                                                        color: '#2196f3',
+                                                        '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.1)' }
+                                                    }}
                                                     size="small"
                                                 >
                                                     <EditIcon />
@@ -333,7 +664,10 @@ const MemberList = () => {
                                             <Tooltip title="Delete User">
                                                 <IconButton
                                                     onClick={() => handleDeleteClick(user)}
-                                                    color="error"
+                                                    sx={{
+                                                        color: '#f44336',
+                                                        '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' }
+                                                    }}
                                                     size="small"
                                                 >
                                                     <DeleteIcon />
@@ -342,23 +676,101 @@ const MemberList = () => {
                                         </Stack>
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
 
-            {/* Edit User Modal */}
-            <Dialog open={openEditModal} onClose={() => setOpenEditModal(false)} maxWidth="xs" fullWidth>
-                <DialogTitle>Change User Role</DialogTitle>
-                <DialogContent>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 2,
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
+                            Rows per page:
+                        </Typography>
+                        <select
+                            value={rowsPerPage}
+                            onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                            style={{
+                                background: 'transparent',
+                                color: 'white',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '4px',
+                                padding: '4px 8px'
+                            }}
+                        >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
+                            {page * rowsPerPage + 1}–{Math.min((page + 1) * rowsPerPage, filteredUsers.length)} of {filteredUsers.length}
+                        </Typography>
+                        <Box sx={{ display: 'flex' }}>
+                            <IconButton
+                                onClick={() => handleChangePage(null, page - 1)}
+                                disabled={page === 0}
+                                sx={{
+                                    color: page === 0 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
+                                    p: 1
+                                }}
+                            >
+                                <KeyboardArrowLeftIcon />
+                            </IconButton>
+                            <IconButton
+                                onClick={() => handleChangePage(null, page + 1)}
+                                disabled={page >= Math.ceil(filteredUsers.length / rowsPerPage) - 1}
+                                sx={{
+                                    color: page >= Math.ceil(filteredUsers.length / rowsPerPage) - 1
+                                        ? 'rgba(255, 255, 255, 0.3)'
+                                        : 'white',
+                                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
+                                    p: 1
+                                }}
+                            >
+                                <KeyboardArrowRightIcon />
+                            </IconButton>
+                        </Box>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Dialog open={openEditModal} onClose={() => setOpenEditModal(false)} maxWidth="xs" fullWidth
+                PaperProps={{
+                    sx: { bgcolor: '#1e1e1e', color: 'white' }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Change User Role
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
                     <FormControl fullWidth sx={{ mt: 2 }}>
-                        <InputLabel>Role</InputLabel>
+                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Role</InputLabel>
                         <Select
                             name="role"
                             value={formData.role}
                             onChange={handleInputChange}
                             label="Role"
+                            sx={{
+                                color: 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(255, 255, 255, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(255, 255, 255, 0.5)'
+                                }
+                            }}
                         >
                             <MenuItem value="developer">Developer</MenuItem>
                             <MenuItem value="manager">Manager</MenuItem>
@@ -366,159 +778,205 @@ const MemberList = () => {
                         </Select>
                     </FormControl>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenEditModal(false)}>Cancel</Button>
-                    <Button onClick={handleEditSubmit} variant="contained" color="primary">
+                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <Button
+                        onClick={() => setOpenEditModal(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleEditSubmit}
+                        variant="contained"
+                        sx={{ bgcolor: '#2196f3' }}
+                    >
                         Save Changes
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Delete User Modal */}
-            <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
-                <DialogTitle>Delete User</DialogTitle>
-                <DialogContent>
-                    <Typography>
+            <Dialog
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#1e1e1e', color: 'white' }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Delete User
+                </DialogTitle>
+                <DialogContent sx={{ pt: 2, pb: 2 }}>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                         Are you sure you want to delete {selectedUser?.firstName} {selectedUser?.lastName}?
                         This action cannot be undone.
                     </Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenDeleteModal(false)}>Cancel</Button>
-                    <Button onClick={handleDeleteSubmit} variant="contained" color="error">
+                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <Button
+                        onClick={() => setOpenDeleteModal(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteSubmit}
+                        variant="contained"
+                        sx={{ bgcolor: '#f44336' }}
+                    >
                         Delete
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Import Users Modal */}
-            <Dialog open={openImportModal} onClose={() => !processing && setOpenImportModal(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Import Users from CSV</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={3} sx={{ mt: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            Upload a CSV file with user information. Each imported user will be created with a default password based on their role. Users will be prompted to change their password on first login.
-                        </Typography>
+            <Dialog
+                open={openImportModal}
+                onClose={() => !processing && setOpenImportModal(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { bgcolor: '#1e1e1e', color: 'white' }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Import Users from CSV
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
+                        Upload a CSV file with user data. The file should have headers: firstName, lastName, email, username, role
+                    </Typography>
 
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                                CSV Format Requirements:
-                            </Typography>
-                            <ul style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                                <li>File must be in CSV format with the correct headers</li>
-                                <li>First row must contain these headers: <code>firstName,lastName,username,email,role</code></li>
-                                <li>Role must be one of: <code>admin</code>, <code>manager</code>, or <code>developer</code></li>
-                                <li>Username and email must be unique</li>
-                                <li>All fields are required</li>
-                            </ul>
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                                CSV Format Example:
-                            </Typography>
-                            <Paper sx={{ p: 2, bgcolor: 'background.default', fontFamily: 'monospace', fontSize: '0.85rem', overflowX: 'auto' }}>
-                                firstName,lastName,username,email,role<br />
-                                John,Doe,johndoe,john.doe@example.com,admin<br />
-                                Jane,Smith,jsmith,jane.smith@example.com,manager<br />
-                                Bob,Johnson,bjohnson,bob.johnson@example.com,developer
-                            </Paper>
-                            <Button
-                                variant="text"
-                                size="small"
-                                sx={{ mt: 1 }}
-                                component="a"
-                                href="/sample_users.csv"
-                                download="sample_users.csv"
-                            >
-                                Download Sample CSV
-                            </Button>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Typography variant="subtitle2">Default Passwords</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Set default passwords for each role. Users will be required to change these on first login.
-                            </Typography>
-                            <TextField
-                                name="adminPassword"
-                                label="Admin Password"
-                                value={importData.adminPassword}
-                                onChange={handleImportInputChange}
-                                type="password"
-                                fullWidth
-                                margin="dense"
-                                required
-                                helperText="Suggested: Admin@123"
-                            />
-                            <TextField
-                                name="managerPassword"
-                                label="Manager Password"
-                                value={importData.managerPassword}
-                                onChange={handleImportInputChange}
-                                type="password"
-                                fullWidth
-                                margin="dense"
-                                required
-                                helperText="Suggested: Manager@123"
-                            />
-                            <TextField
-                                name="developerPassword"
-                                label="Developer Password"
-                                value={importData.developerPassword}
-                                onChange={handleImportInputChange}
-                                type="password"
-                                fullWidth
-                                margin="dense"
-                                required
-                                helperText="Suggested: Developer@123"
-                            />
-                        </Box>
-
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv"
-                                style={{ display: 'none' }}
-                                onChange={handleFileChange}
-                            />
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <input
+                            accept=".csv"
+                            type="file"
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                            id="csv-file-input"
+                        />
+                        <label htmlFor="csv-file-input">
                             <Button
                                 variant="outlined"
-                                startIcon={<FileUploadIcon />}
-                                onClick={() => fileInputRef.current.click()}
-                                disabled={processing}
+                                component="span"
+                                startIcon={<UploadIcon />}
+                                fullWidth
+                                sx={{
+                                    color: 'white',
+                                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                                    '&:hover': { borderColor: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' }
+                                }}
                             >
-                                Select CSV File
+                                {importData.csvFile ? importData.csvFile.name : 'Choose CSV File'}
                             </Button>
-                            {importData.csvFile && (
-                                <Typography variant="body2">
-                                    Selected: {importData.csvFile.name}
-                                </Typography>
+                        </label>
+                    </FormControl>
+
+                    <Typography variant="body2" sx={{ mt: 2, mb: 1, color: 'rgba(255, 255, 255, 0.9)' }}>
+                        Default Passwords for Imported Users
+                    </Typography>
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <TextField
+                            name="adminPassword"
+                            label="Admin Password"
+                            value={importData.adminPassword}
+                            onChange={handleImportInputChange}
+                            fullWidth
+                            margin="normal"
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            InputProps={{
+                                sx: {
+                                    color: 'white',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.23)'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)'
+                                    }
+                                }
+                            }}
+                        />
+                    </FormControl>
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <TextField
+                            name="managerPassword"
+                            label="Manager Password"
+                            value={importData.managerPassword}
+                            onChange={handleImportInputChange}
+                            fullWidth
+                            margin="normal"
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            InputProps={{
+                                sx: {
+                                    color: 'white',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.23)'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)'
+                                    }
+                                }
+                            }}
+                        />
+                    </FormControl>
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <TextField
+                            name="developerPassword"
+                            label="Developer Password"
+                            value={importData.developerPassword}
+                            onChange={handleImportInputChange}
+                            fullWidth
+                            margin="normal"
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            InputProps={{
+                                sx: {
+                                    color: 'white',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.23)'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)'
+                                    }
+                                }
+                            }}
+                        />
+                    </FormControl>
+
+                    {importResult && (
+                        <Box sx={{ mb: 2, mt: 3 }}>
+                            <Alert
+                                severity={importResult.errors.length === 0 ? "success" : "warning"}
+                                sx={{ bgcolor: importResult.errors.length === 0 ? 'rgba(46, 125, 50, 0.1)' : 'rgba(237, 108, 2, 0.1)', color: importResult.errors.length === 0 ? '#81c784' : '#ffb74d' }}
+                            >
+                                {importResult.success} of {importResult.total} users imported successfully
+                            </Alert>
+
+                            {importResult.errors.length > 0 && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Typography variant="body2" sx={{ color: '#f44336', mb: 1 }}>
+                                        Failed to import {importResult.errors.length} users:
+                                    </Typography>
+                                    <ul style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, paddingLeft: '1.5rem' }}>
+                                        {importResult.errors.map((error, index) => (
+                                            <li key={index}>{error}</li>
+                                        ))}
+                                    </ul>
+                                </Box>
                             )}
                         </Box>
-
-                        {importResult && (
-                            <Alert severity={importResult.errors.length > 0 ? "warning" : "success"}>
-                                Successfully imported {importResult.success} users.
-                                {importResult.errors.length > 0 && (
-                                    <>
-                                        <Typography variant="body2" sx={{ mt: 1 }}>Errors ({importResult.errors.length}):</Typography>
-                                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                            {importResult.errors.slice(0, 5).map((error, index) => (
-                                                <li key={index}>{error}</li>
-                                            ))}
-                                            {importResult.errors.length > 5 && <li>...and {importResult.errors.length - 5} more errors</li>}
-                                        </ul>
-                                    </>
-                                )}
-                            </Alert>
-                        )}
-                    </Stack>
+                    )}
                 </DialogContent>
-                <DialogActions>
+                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Button
                         onClick={() => setOpenImportModal(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
                         disabled={processing}
                     >
                         Cancel
@@ -526,22 +984,14 @@ const MemberList = () => {
                     <Button
                         onClick={handleImportSubmit}
                         variant="contained"
-                        color="primary"
-                        disabled={processing || !importData.csvFile}
-                        startIcon={processing ? <CircularProgress size={20} /> : null}
+                        sx={{ bgcolor: '#4caf50' }}
+                        disabled={!importData.csvFile || processing}
                     >
-                        {processing ? 'Processing...' : 'Import Users'}
+                        {processing ? 'Importing...' : 'Import Users'}
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={6000}
-                onClose={handleCloseSnackbar}
-                message={snackbarMessage}
-            />
-        </Container>
+        </Box>
     );
 };
 

@@ -156,4 +156,60 @@ router.get('/:owner/:repo/raw/:branch/*', auth, async (req, res) => {
     }
 });
 
+// Proxy for raw GitHub content - will handle external URLs like raw.githubusercontent.com
+router.get('/proxy/raw-content', auth, async (req, res) => {
+    try {
+        const { url } = req.query;
+
+        if (!url) {
+            return res.status(400).json({ message: 'URL parameter is required' });
+        }
+
+        // Validate that this is a GitHub URL 
+        if (!url.startsWith('https://raw.githubusercontent.com/') &&
+            !url.startsWith('https://github.com/')) {
+            return res.status(400).json({
+                message: 'Invalid URL. Only GitHub URLs are supported.'
+            });
+        }
+
+        console.log(`Proxying request to: ${url}`);
+
+        const response = await axios.get(url, {
+            responseType: 'text',
+            headers: {
+                // Don't send auth token to GitHub raw content
+                Authorization: undefined,
+                // Set user agent to avoid rate limiting
+                'User-Agent': 'CodeReviewApp'
+            }
+        });
+
+        // Set the appropriate content type based on the file extension
+        const fileExtension = url.split('.').pop().toLowerCase();
+        const contentTypeMap = {
+            'js': 'application/javascript',
+            'jsx': 'application/javascript',
+            'ts': 'application/typescript',
+            'tsx': 'application/typescript',
+            'json': 'application/json',
+            'html': 'text/html',
+            'css': 'text/css',
+            'md': 'text/markdown',
+            'txt': 'text/plain'
+        };
+
+        const contentType = contentTypeMap[fileExtension] || 'text/plain';
+        res.setHeader('Content-Type', contentType);
+        res.send(response.data);
+
+    } catch (error) {
+        console.error('GitHub Raw Content Error:', error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            message: error.response?.data?.message || 'Error fetching raw content',
+            url: req.query.url
+        });
+    }
+});
+
 module.exports = router; 

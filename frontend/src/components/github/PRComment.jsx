@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import api from '../../axiosConfig';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../common/SnackbarProvider';
 import {
     Box,
     Typography,
@@ -13,7 +14,11 @@ import {
     Collapse,
     Stack,
     Tooltip,
-    Chip
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -34,8 +39,12 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
     const [loadingReplies, setLoadingReplies] = useState(false);
     const [error, setError] = useState(null);
     const [hasReplies, setHasReplies] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [replyToDelete, setReplyToDelete] = useState(null);
+    const [replyDeleteDialogOpen, setReplyDeleteDialogOpen] = useState(false);
 
     const { currentUser } = useAuth();
+    const { showSuccess, showError } = useSnackbar();
     const isOwner = currentUser && comment.user && currentUser._id === comment.user._id;
 
     // Utility function to check if a reply is a duplicate
@@ -223,10 +232,6 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
 
     // Handle deleting a comment
     const handleDelete = async () => {
-        if (!window.confirm('Are you sure you want to delete this comment?')) {
-            return;
-        }
-
         try {
             await api.delete(`/comments/${comment._id}`);
 
@@ -247,9 +252,41 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                 });
                 window.dispatchEvent(event);
             }
+
+            showSuccess('Comment deleted successfully');
+            setDeleteDialogOpen(false);
         } catch (err) {
             console.error('Error deleting comment:', err);
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
+            setDeleteDialogOpen(false);
+        }
+    };
+
+    // Handle deleting a reply
+    const handleDeleteReply = async (replyId) => {
+        try {
+            await api.delete(`/comments/${replyId}`);
+
+            // Remove the deleted reply from local state
+            setReplies(prevReplies => prevReplies.filter(r => r._id !== replyId));
+
+            // Send event with parent ID for real-time updates
+            const event = new CustomEvent('comment-reply-deleted', {
+                detail: {
+                    replyId: replyId,
+                    parentId: comment._id
+                }
+            });
+            window.dispatchEvent(event);
+
+            showSuccess('Reply deleted successfully');
+            setReplyDeleteDialogOpen(false);
+            setReplyToDelete(null);
+        } catch (err) {
+            console.error('Error deleting reply:', err);
+            showError(err.response?.data?.message || err.message);
+            setReplyDeleteDialogOpen(false);
+            setReplyToDelete(null);
         }
     };
 
@@ -288,6 +325,7 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
         const [error, setError] = useState(null);
 
         const { currentUser } = useAuth();
+        const { showSuccess, showError } = useSnackbar();
         const isOwner = currentUser && reply.user && currentUser._id === reply.user._id;
 
         // Handle editing a reply
@@ -376,26 +414,8 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                                     <IconButton
                                         size="small"
                                         onClick={() => {
-                                            if (window.confirm('Delete this reply?')) {
-                                                api.delete(`/comments/${reply._id}`)
-                                                    .then(() => {
-                                                        // Call the onDelete callback to update parent state
-                                                        if (onDelete) onDelete(reply._id);
-
-                                                        // Send event with parent ID for real-time updates
-                                                        const event = new CustomEvent('comment-reply-deleted', {
-                                                            detail: {
-                                                                replyId: reply._id,
-                                                                parentId: parentId
-                                                            }
-                                                        });
-                                                        window.dispatchEvent(event);
-                                                    })
-                                                    .catch(err => {
-                                                        console.error('Error deleting reply:', err);
-                                                        setError(err.response?.data?.message || err.message);
-                                                    });
-                                            }
+                                            setReplyToDelete(reply);
+                                            setReplyDeleteDialogOpen(true);
                                         }}
                                     >
                                         <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
@@ -517,7 +537,7 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                                 </IconButton>
                             </Tooltip>
                             <Tooltip title="Delete Comment">
-                                <IconButton size="small" onClick={handleDelete}>
+                                <IconButton size="small" onClick={() => setDeleteDialogOpen(true)}>
                                     <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
                                 </IconButton>
                             </Tooltip>
@@ -666,6 +686,74 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                     )}
                 </Box>
             </Collapse>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Comment Deletion
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to delete this comment? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDelete}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Reply Delete Confirmation Dialog */}
+            <Dialog
+                open={replyDeleteDialogOpen}
+                onClose={() => setReplyDeleteDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Reply Deletion
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to delete this reply? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setReplyDeleteDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => handleDeleteReply(replyToDelete?._id)}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 });

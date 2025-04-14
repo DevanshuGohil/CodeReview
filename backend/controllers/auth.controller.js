@@ -4,6 +4,33 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const emailService = require('../services/email.service');
 
+// Password validation function
+const validatePassword = (password) => {
+    const errors = [];
+
+    // Check length
+    if (password.length < 8) {
+        errors.push('Password must be at least 8 characters long');
+    }
+
+    // Check for special character
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        errors.push('Password must contain at least one special character');
+    }
+
+    // Check for number
+    if (!/\d/.test(password)) {
+        errors.push('Password must contain at least one number');
+    }
+
+    // Check for alphabet
+    if (!/[a-zA-Z]/.test(password)) {
+        errors.push('Password must contain at least one letter');
+    }
+
+    return errors;
+};
+
 exports.register = async (req, res) => {
     try {
         const { username, email, password, firstName, lastName } = req.body;
@@ -23,6 +50,16 @@ exports.register = async (req, res) => {
         if (user) {
             console.log(`[${new Date().toISOString()}] Registration failed - Username already taken: ${username} from IP: ${ip}`);
             return res.status(400).json({ message: 'Username is already taken' });
+        }
+
+        // Validate password
+        const passwordErrors = validatePassword(password);
+        if (passwordErrors.length > 0) {
+            console.log(`[${new Date().toISOString()}] Registration failed - Password validation failed for ${email} from IP: ${ip}`);
+            return res.status(400).json({
+                message: 'Password does not meet requirements',
+                errors: passwordErrors
+            });
         }
 
         // Create new user
@@ -184,6 +221,15 @@ exports.changePassword = async (req, res) => {
 
         if (!isMatch) {
             return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        // Validate new password
+        const passwordErrors = validatePassword(newPassword);
+        if (passwordErrors.length > 0) {
+            return res.status(400).json({
+                message: 'Password does not meet requirements',
+                errors: passwordErrors
+            });
         }
 
         // Hash new password

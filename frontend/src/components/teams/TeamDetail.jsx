@@ -4,6 +4,7 @@ import api from '../../axiosConfig';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import UserSelector from '../users/UserSelector';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../common/SnackbarProvider';
 import {
     Container,
     Typography,
@@ -30,7 +31,12 @@ import {
     Stack,
     TextField,
     IconButton,
-    Tooltip
+    Tooltip,
+    CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -44,15 +50,22 @@ const TeamDetail = () => {
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [selectedUser, setSelectedUser] = useState('');
+    const [addingMember, setAddingMember] = useState(false);
 
     // Editing state
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState('');
     const [editDescription, setEditDescription] = useState('');
 
+    // Dialog states
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState(null);
+
     const navigate = useNavigate();
     const { id } = useParams();
     const { currentUser } = useAuth();
+    const { showSuccess, showError } = useSnackbar();
 
     // Check if user is a manager (can manage team members)
     const canManageTeam = currentUser?.role === 'manager';
@@ -81,11 +94,12 @@ const TeamDetail = () => {
         setSuccessMessage(null);
 
         if (!canManageTeam) {
-            setError("Only managers can add team members");
+            showError("Only managers can add team members");
             return;
         }
 
         try {
+            setAddingMember(true);
             const response = await api.post(`/teams/${id}/members`, {
                 userId: selectedUser,
                 role: 'member' // Default role is always 'member'
@@ -93,14 +107,11 @@ const TeamDetail = () => {
 
             setTeam(response.data);
             setSelectedUser('');
-            setSuccessMessage('User successfully added to the team!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage(null);
-            }, 3000);
+            showSuccess('User successfully added to the team!');
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
+        } finally {
+            setAddingMember(false);
         }
     };
 
@@ -109,27 +120,26 @@ const TeamDetail = () => {
         setSuccessMessage(null);
 
         if (!canManageTeam) {
-            setError("Only managers can remove team members");
-            return;
-        }
-
-        // Show confirmation dialog
-        if (!window.confirm(`Are you sure you want to remove ${userName} from the team?`)) {
+            showError("Only managers can remove team members");
             return;
         }
 
         try {
             const response = await api.delete(`/teams/${id}/members/${userId}`);
             setTeam(response.data);
-            setSuccessMessage('User successfully removed from the team!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage(null);
-            }, 3000);
+            showSuccess('User successfully removed from the team!');
+            setRemoveMemberDialogOpen(false);
+            setMemberToRemove(null);
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
+            setRemoveMemberDialogOpen(false);
+            setMemberToRemove(null);
         }
+    };
+
+    const openRemoveMemberDialog = (member) => {
+        setMemberToRemove(member);
+        setRemoveMemberDialogOpen(true);
     };
 
     const handleStartEditing = () => {
@@ -147,7 +157,7 @@ const TeamDetail = () => {
         setSuccessMessage(null);
 
         if (!canManageTeam) {
-            setError("Only managers can update team details");
+            showError("Only managers can update team details");
             return;
         }
 
@@ -162,35 +172,24 @@ const TeamDetail = () => {
             setTeam(updatedTeamResponse.data);
 
             setIsEditing(false);
-            setSuccessMessage('Team details updated successfully!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage(null);
-            }, 3000);
+            showSuccess('Team details updated successfully!');
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
         }
     };
 
     const handleDeleteTeam = async () => {
         if (!canManageTeam) {
-            setError("Only managers can delete teams");
-            return;
-        }
-
-        // Show confirmation dialog with team name for clarity
-        if (!window.confirm(`Are you sure you want to delete team "${team.name}"? This action cannot be undone.`)) {
+            showError("Only managers can delete teams");
             return;
         }
 
         try {
             await api.delete(`/teams/${id}`);
-            // Show success message and navigate back to teams list
-            alert('Team deleted successfully');
+            showSuccess('Team deleted successfully');
             navigate('/teams');
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            showError(err.response?.data?.message || err.message);
         }
     };
 
@@ -238,7 +237,7 @@ const TeamDetail = () => {
                             </Tooltip>
                             <Tooltip title="Delete Team">
                                 <IconButton
-                                    onClick={handleDeleteTeam}
+                                    onClick={() => setDeleteDialogOpen(true)}
                                     color="error"
                                 >
                                     <DeleteIcon />
@@ -334,17 +333,13 @@ const TeamDetail = () => {
                                             </TableCell>
                                             {canManageTeam && (
                                                 <TableCell align="right">
-                                                    <Button
+                                                    <IconButton
                                                         size="small"
                                                         color="error"
-                                                        startIcon={<DeleteIcon />}
-                                                        onClick={() => handleRemoveMember(
-                                                            member.user._id,
-                                                            `${member.user.firstName} ${member.user.lastName}`
-                                                        )}
+                                                        onClick={() => openRemoveMemberDialog(member)}
                                                     >
-                                                        Remove
-                                                    </Button>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
                                                 </TableCell>
                                             )}
                                         </TableRow>
@@ -362,24 +357,26 @@ const TeamDetail = () => {
                     {canManageTeam && (
                         <>
                             <Divider sx={{ my: 4 }} />
-                            <Box component="form" onSubmit={handleAddMember}>
+                            <Box component="form" onSubmit={handleAddMember} sx={{ width: '100%' }}>
                                 <Typography variant="h6" gutterBottom>Add Member</Typography>
                                 <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={12} md={8}>
+                                    <Grid item xs={12} md={9}>
                                         <UserSelector
                                             value={selectedUser}
                                             onChange={setSelectedUser}
                                             excludeUsers={team.members.map(member => member.user._id)}
+                                            sx={{ width: '100%', minWidth: '300px' }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
+                                    <Grid item xs={12} md={3}>
                                         <Button
                                             type="submit"
                                             variant="contained"
-                                            disabled={!selectedUser}
+                                            disabled={!selectedUser || addingMember}
                                             fullWidth
+                                            startIcon={addingMember ? <CircularProgress size={20} color="inherit" /> : null}
                                         >
-                                            Add to Team
+                                            {addingMember ? 'Adding...' : 'Add to Team'}
                                         </Button>
                                     </Grid>
                                 </Grid>
@@ -388,6 +385,74 @@ const TeamDetail = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Team Deletion
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to delete team "{team?.name}"? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteTeam}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Remove Member Confirmation Dialog */}
+            <Dialog
+                open={removeMemberDialogOpen}
+                onClose={() => setRemoveMemberDialogOpen(false)}
+                PaperProps={{
+                    sx: { bgcolor: '#2d2d2d', color: 'white', borderRadius: 2 }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    Confirm Member Removal
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        Are you sure you want to remove {memberToRemove?.user?.username || memberToRemove?.user?.email || 'this user'} from the team?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button
+                        onClick={() => setRemoveMemberDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => handleRemoveMember(memberToRemove?.user?._id, memberToRemove?.user?.username || memberToRemove?.user?.email)}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        Remove
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

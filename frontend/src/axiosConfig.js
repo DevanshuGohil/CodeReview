@@ -51,4 +51,30 @@ api.interceptors.response.use(
     }
 );
 
+// Utility functions for handling GitHub content
+api.fetchRawFile = async (url) => {
+    try {
+        return await api.get('/github/proxy/raw-content', {
+            params: { url }
+        });
+    } catch (error) {
+        console.error('Error fetching raw file:', error);
+        throw error;
+    }
+};
+
+// Function to determine the appropriate provider API endpoint
+api.getProviderEndpoint = (provider) => {
+    switch (provider?.toLowerCase()) {
+        case 'github':
+            return '/github';
+        case 'gitlab':
+            return '/gitlab';
+        case 'bitbucket':
+            return '/bitbucket';
+        default:
+            return '/github'; // Default to GitHub
+    }
+};
+
 export default api; 

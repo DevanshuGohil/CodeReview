@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import SnackbarProvider from './components/common/SnackbarProvider';
 import Navbar from './components/layout/Navbar';
 import Breadcrumbs from './components/layout/Breadcrumbs';
 import Login from './components/auth/Login';
@@ -183,75 +184,77 @@ function App() {
     <AuthProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
-          <div className="app">
-            <Navbar />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } />
-              <Route path="/register" element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              } />
+        <SnackbarProvider>
+          <Router>
+            <div className="app">
+              <Navbar />
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                } />
+                <Route path="/register" element={
+                  <PublicRoute>
+                    <Register />
+                  </PublicRoute>
+                } />
 
-              {/* Password Reset Route */}
-              <Route path="/reset-password" element={
-                <ResetPassword />
-              } />
+                {/* Password Reset Route */}
+                <Route path="/reset-password" element={
+                  <ResetPassword />
+                } />
 
-              {/* All authenticated routes - include breadcrumbs */}
-              <Route path="/*" element={
-                <ProtectedLayout>
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/profile" element={<Profile />} />
+                {/* All authenticated routes - include breadcrumbs */}
+                <Route path="/*" element={
+                  <ProtectedLayout>
+                    <Routes>
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/profile" element={<Profile />} />
 
-                    {/* Admin routes */}
-                    <Route path="/admin/members" element={
-                      <AdminRoute>
-                        <MemberList />
-                      </AdminRoute>
-                    } />
+                      {/* Admin routes */}
+                      <Route path="/admin/members" element={
+                        <AdminRoute>
+                          <MemberList />
+                        </AdminRoute>
+                      } />
 
-                    {/* Team routes */}
-                    <Route path="/teams" element={<TeamList />} />
-                    <Route path="/teams/new" element={
-                      <ManagerRoute>
-                        <TeamForm />
-                      </ManagerRoute>
-                    } />
-                    <Route path="/teams/:id" element={<TeamDetail />} />
+                      {/* Team routes */}
+                      <Route path="/teams" element={<TeamList />} />
+                      <Route path="/teams/new" element={
+                        <ManagerRoute>
+                          <TeamForm />
+                        </ManagerRoute>
+                      } />
+                      <Route path="/teams/:id" element={<TeamDetail />} />
 
-                    {/* Project routes */}
-                    <Route path="/projects" element={<ProjectList />} />
-                    <Route path="/projects/new" element={
-                      <ManagerRoute>
-                        <ProjectForm />
-                      </ManagerRoute>
-                    } />
-                    <Route path="/projects/:id" element={<ProjectDetail />} />
+                      {/* Project routes */}
+                      <Route path="/projects" element={<ProjectList />} />
+                      <Route path="/projects/new" element={
+                        <ManagerRoute>
+                          <ProjectForm />
+                        </ManagerRoute>
+                      } />
+                      <Route path="/projects/:id" element={<ProjectDetail />} />
 
-                    {/* GitHub integration routes */}
-                    <Route path="/projects/:projectId/repository/*" element={<RepositoryFiles />} />
-                    <Route path="/projects/:projectId/pulls" element={<PullRequestList />} />
-                    <Route path="/projects/:projectId/pulls/:pullNumber" element={<PullRequestView />} />
+                      {/* GitHub integration routes */}
+                      <Route path="/projects/:projectId/repository/*" element={<RepositoryFiles />} />
+                      <Route path="/projects/:projectId/pulls" element={<PullRequestList />} />
+                      <Route path="/projects/:projectId/pulls/:pullNumber" element={<PullRequestView />} />
 
-                    {/* Redirect root to dashboard */}
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      {/* Redirect root to dashboard */}
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-                    {/* Catch-all route */}
-                    <Route path="*" element={<Navigate to="/dashboard" />} />
-                  </Routes>
-                </ProtectedLayout>
-              } />
-            </Routes>
-          </div>
-        </Router>
+                      {/* Catch-all route */}
+                      <Route path="*" element={<Navigate to="/dashboard" />} />
+                    </Routes>
+                  </ProtectedLayout>
+                } />
+              </Routes>
+            </div>
+          </Router>
+        </SnackbarProvider>
       </ThemeProvider>
     </AuthProvider>
   );

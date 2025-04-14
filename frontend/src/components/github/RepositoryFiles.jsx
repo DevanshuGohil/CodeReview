@@ -34,6 +34,10 @@ import {
     Code as CodeIcon,
     ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../common/SnackbarProvider';
 
 const RepositoryFiles = () => {
     const [files, setFiles] = useState([]);
@@ -47,55 +51,78 @@ const RepositoryFiles = () => {
     const { projectId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const [currentPath, setCurrentPath] = useState('');
+    const [gitProvider, setGitProvider] = useState('github'); // Default to GitHub
+    const { currentUser } = useAuth();
+    const { showSuccess, showError } = useSnackbar();
 
-    // Get the current path from query params or default to empty string
-    const queryParams = new URLSearchParams(location.search);
-    const currentPath = queryParams.get('path') || '';
+    // Parse path from URL if present
+    useEffect(() => {
+        const pathParam = new URLSearchParams(location.search).get('path');
+        if (pathParam) {
+            setCurrentPath(pathParam);
+        }
+    }, [location]);
 
+    // Fetch project and repo data
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                setError(null);
 
-                // First fetch the project to get GitHub repo details
-                const projectResponse = await api.get(`/projects/${projectId}`);
-                const projectData = projectResponse.data;
-                setProject(projectData);
+                const response = await api.get(`/projects/${projectId}`);
+                setProject(response.data);
 
-                if (!projectData.githubRepo || !projectData.githubRepo.owner || !projectData.githubRepo.repo) {
-                    throw new Error('This project has no GitHub repository configured');
+                // Determine the Git provider from project data
+                if (response.data.gitlabRepo) {
+                    setGitProvider('gitlab');
+                } else if (response.data.bitbucketRepo) {
+                    setGitProvider('bitbucket');
+                } else {
+                    // Default to GitHub
+                    setGitProvider('github');
                 }
 
-                const { owner, repo } = projectData.githubRepo;
+                const repoInfo = response.data.githubRepo || response.data.gitlabRepo || response.data.bitbucketRepo;
 
-                // Then fetch repository files
-                const filesResponse = await api.get(`/github/${owner}/${repo}/contents`, {
+                if (!repoInfo) {
+                    throw new Error('No repository information found for this project');
+                }
+
+                // Get the provider-specific endpoint
+                const providerEndpoint = api.getProviderEndpoint(gitProvider);
+                const { owner, repo } = repoInfo;
+
+                const filesResponse = await api.get(`${providerEndpoint}/${owner}/${repo}/contents`, {
                     params: { path: currentPath }
                 });
 
-                setFiles(filesResponse.data.files);
+                setFiles(filesResponse.data.files || []);
                 setLoading(false);
             } catch (err) {
-                setError(err.response?.data?.message || err.message);
+                console.error('Error fetching repository data:', err);
+                showError(`Failed to load repository files: ${err.response?.data?.message || err.message}`);
                 setLoading(false);
             }
         };
 
-        fetchData();
-    }, [projectId, currentPath]);
+        if (projectId) {
+            fetchData();
+        }
+    }, [projectId, currentPath, gitProvider]);
 
     const navigateToFolder = (path) => {
-        navigate(`/projects/${projectId}/repository?path=${path}`);
+        setCurrentPath(path);
+        // Update URL without reloading
+        navigate(`/projects/${projectId}/files?path=${encodeURIComponent(path)}`, { replace: true });
     };
 
     const navigateUp = () => {
-        if (!currentPath) return;
-
-        const parts = currentPath.split('/');
-        parts.pop();
-        const newPath = parts.join('/');
-
-        navigate(`/projects/${projectId}/repository${newPath ? `?path=${newPath}` : ''}`);
+        const pathParts = currentPath.split('/');
+        pathParts.pop();
+        const newPath = pathParts.join('/');
+        navigateToFolder(newPath);
     };
 
     // Function to view file content
@@ -112,24 +139,14 @@ const RepositoryFiles = () => {
                 return;
             }
 
-            // Use axios instead of fetch
-            const response = await axios.get(file.download_url, {
-                // Use responseType: 'text' to get the raw content
-                responseType: 'text',
-                // This is an external URL, don't use the baseURL from axiosConfig
-                baseURL: '',
-                // Don't include auth token for GitHub raw content
-                headers: {
-                    Authorization: null
-                }
-            });
-
-            // Access the response data directly
+            // Use the utility function to fetch raw file content via our proxy
+            const response = await api.fetchRawFile(file.download_url);
             setFileContent(response.data);
+
         } catch (err) {
-            setFileError("Failed to load file content: " + (err.response?.data?.message || err.message || "Unknown error"));
-            console.error("Error loading file:", err);
-        } finally {
+            console.error('Error fetching file content:', err);
+            setFileError(`Failed to load file content: ${err.response?.data?.message || err.message}`);
+            showError(`Failed to load file content: ${err.response?.data?.message || err.message}`);
             setFileLoading(false);
         }
     };
@@ -144,7 +161,35 @@ const RepositoryFiles = () => {
     // Copy file content to clipboard
     const handleCopyContent = () => {
         navigator.clipboard.writeText(fileContent);
-        // Could add a toast notification here
+        showSuccess('File content copied to clipboard');
+    };
+
+    // Determine file language for syntax highlighting
+    const getFileLanguage = (fileName) => {
+        const extension = fileName.split('.').pop().toLowerCase();
+        const languageMap = {
+            'js': 'javascript',
+            'jsx': 'jsx',
+            'ts': 'typescript',
+            'tsx': 'tsx',
+            'json': 'json',
+            'html': 'html',
+            'css': 'css',
+            'md': 'markdown',
+            'py': 'python',
+            'java': 'java',
+            'rb': 'ruby',
+            'php': 'php',
+            'c': 'c',
+            'cpp': 'cpp',
+            'go': 'go',
+            'rs': 'rust',
+            'sh': 'bash',
+            'yml': 'yaml',
+            'yaml': 'yaml',
+            'xml': 'xml'
+        };
+        return languageMap[extension] || 'text';
     };
 
     if (loading) return (
@@ -174,7 +219,9 @@ const RepositoryFiles = () => {
         </Container>
     );
 
-    const { owner, repo } = project.githubRepo;
+    // Get repo info based on provider
+    const repoInfo = project.githubRepo || project.gitlabRepo || project.bitbucketRepo;
+    const { owner, repo } = repoInfo;
 
     // Build breadcrumbs for the path
     const pathParts = currentPath ? currentPath.split('/') : [];
@@ -186,12 +233,35 @@ const RepositoryFiles = () => {
         })
     ];
 
+    // Get the appropriate provider icon
+    const getProviderIcon = () => {
+        switch (gitProvider) {
+            case 'gitlab':
+                return <img src="/assets/gitlab-icon.svg" alt="GitLab" style={{ width: 24, height: 24 }} />;
+            case 'bitbucket':
+                return <img src="/assets/bitbucket-icon.svg" alt="Bitbucket" style={{ width: 24, height: 24 }} />;
+            case 'github':
+            default:
+                return <GitHubIcon />;
+        }
+    };
+
+    // Get provider name for display
+    const getProviderName = () => {
+        switch (gitProvider) {
+            case 'gitlab': return 'GitLab';
+            case 'bitbucket': return 'Bitbucket';
+            case 'github':
+            default: return 'GitHub';
+        }
+    };
+
     return (
         <Container maxWidth="lg" sx={{ mt: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Box>
                     <Typography variant="h4" component="h1" color="white" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <GitHubIcon />
+                        {getProviderIcon()}
                         Repository Files
                     </Typography>
                     <Typography variant="h6" color="rgba(255,255,255,0.7)">
@@ -299,9 +369,9 @@ const RepositoryFiles = () => {
                                                 size="small"
                                                 variant="outlined"
                                                 color="primary"
-                                                startIcon={<GitHubIcon />}
+                                                startIcon={getProviderIcon()}
                                             >
-                                                GitHub
+                                                {getProviderName()}
                                             </Button>
                                         </Box>
                                     )}
@@ -347,58 +417,55 @@ const RepositoryFiles = () => {
                             <CopyIcon />
                         </IconButton>
                         <IconButton
-                            edge="end"
                             color="inherit"
                             onClick={handleCloseFileViewer}
                             aria-label="close"
+                            sx={{ color: 'rgba(255,255,255,0.7)' }}
                         >
                             <CloseIcon />
                         </IconButton>
                     </Box>
                 </DialogTitle>
-                <DialogContent dividers sx={{ p: 0 }}>
+                <DialogContent sx={{ p: 0 }}>
                     {fileLoading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', p: 4 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
                             <CircularProgress />
-                            <Typography sx={{ ml: 2, color: 'white' }}>Loading file content...</Typography>
+                            <Typography color="white" sx={{ ml: 2 }}>Loading file content...</Typography>
                         </Box>
                     ) : fileError ? (
-                        <Alert severity="error" sx={{ m: 2 }}>
-                            {fileError}
-                        </Alert>
+                        <Box sx={{ p: 3 }}>
+                            <Alert severity="error" sx={{ mb: 2 }}>{fileError}</Alert>
+                            <Button
+                                href={selectedFile?.html_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="contained"
+                                color="primary"
+                                startIcon={getProviderIcon()}
+                            >
+                                View on {getProviderName()}
+                            </Button>
+                        </Box>
                     ) : (
-                        <Box
-                            component="pre"
-                            sx={{
-                                m: 0,
-                                p: 2,
-                                overflow: 'auto',
-                                width: '100%',
-                                height: '100%',
-                                color: 'white',
-                                fontSize: '0.875rem',
-                                fontFamily: 'monospace',
-                                bgcolor: 'rgba(30, 30, 30, 1)'
-                            }}
-                        >
-                            {fileContent}
+                        <Box sx={{ overflow: 'auto', maxHeight: '70vh' }}>
+                            <SyntaxHighlighter
+                                language={selectedFile ? getFileLanguage(selectedFile.name) : 'text'}
+                                style={atomOneDark}
+                                customStyle={{
+                                    margin: 0,
+                                    padding: '1.5rem',
+                                    backgroundColor: 'transparent',
+                                    fontSize: '0.9rem',
+                                    lineHeight: '1.5',
+                                    overflow: 'auto'
+                                }}
+                                showLineNumbers
+                            >
+                                {fileContent}
+                            </SyntaxHighlighter>
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.12)', p: 2 }}>
-                    <Button
-                        href={selectedFile?.html_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        startIcon={<GitHubIcon />}
-                        variant="outlined"
-                    >
-                        View on GitHub
-                    </Button>
-                    <Button onClick={handleCloseFileViewer} variant="contained">
-                        Close
-                    </Button>
-                </DialogActions>
             </Dialog>
         </Container>
     );
