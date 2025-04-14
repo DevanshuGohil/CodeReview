@@ -175,5 +175,5 @@ app.get('/api/github/:owner/:repo/pulls/:pull_number/complete', async (req, res)
 // Start the server
 app.listen(port, () => {
     console.log(`GitHub PR Service running on port ${port}`);
-    console.log(`Visit http://localhost:${port} to see available endpoints`);
+    console.log(`Visit ${process.env.API_URL || `http://localhost:${port}`} to see available endpoints`);
 });

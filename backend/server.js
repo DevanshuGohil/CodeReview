@@ -94,8 +94,8 @@ const startApp = async () => {
 
         server.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT}`);
-            console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
-            console.log(`Server is accessible on your network at http://<your-ip-address>:${PORT}`);
+            console.log(`API Documentation available at ${process.env.API_URL || `http://localhost:${PORT}`}/api-docs`);
+            console.log(`Server is accessible on your network at ${process.env.API_URL || `http://<your-ip-address>:${PORT}`}`);
         });
     } catch (error) {
         console.error('Failed to start the application:', error);
