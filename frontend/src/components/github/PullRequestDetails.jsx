@@ -10,13 +10,11 @@ import {
     Stack
 } from '@mui/material';
 import {
-    Merge as MergeIcon,
     Code as CodeIcon,
     GitHub as GitHubIcon,
     Add as AddIcon,
     Remove as RemoveIcon,
-    Commit as CommitIcon,
-    Person as PersonIcon
+    Commit as CommitIcon
 } from '@mui/icons-material';
 
 const PullRequestDetails = ({ pullRequest }) => {

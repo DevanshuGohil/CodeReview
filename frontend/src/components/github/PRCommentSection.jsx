@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../axiosConfig';
-import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import {
     Box,
@@ -12,14 +11,10 @@ import {
     CircularProgress,
     Alert,
     IconButton,
-    Avatar,
     Stack
 } from '@mui/material';
 import {
     Send as SendIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    Reply as ReplyIcon,
     Cancel as CancelIcon,
     Comment as CommentIcon
 } from '@mui/icons-material';
@@ -35,8 +30,7 @@ const PRCommentSection = ({ projectId, pullRequest }) => {
     const commentInputRef = useRef(null);
     const commentRefs = useRef({});
 
-    const { currentUser } = useAuth();
-    const { socket, connected } = useSocket();
+    const { socket } = useSocket();
 
     const pullNumber = pullRequest?.number;
 

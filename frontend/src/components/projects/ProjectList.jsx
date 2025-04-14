@@ -11,18 +11,11 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
-    Paper,
     Chip,
     IconButton,
     Tooltip,
-    ButtonGroup,
-    TextField,
-    InputAdornment,
-    TablePagination,
-    TableSortLabel,
     Grid,
     Stack,
     Dialog,
@@ -138,12 +131,6 @@ const ProjectList = () => {
     // Handle page change for pagination
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
-    };
-
-    // Handle rows per page change
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
     };
 
     // Handle sorting

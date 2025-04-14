@@ -1,4 +1,3 @@
-// components/teams/TeamList.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
 import { Link } from 'react-router-dom';
@@ -12,18 +11,11 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
-    Paper,
     Chip,
     IconButton,
     Tooltip,
-    ButtonGroup,
-    TextField,
-    InputAdornment,
-    TablePagination,
-    TableSortLabel,
     Grid,
     Stack,
     Dialog,
@@ -51,7 +43,6 @@ import {
     Group as GroupIcon,
     Person as PersonIcon,
     CalendarToday as CalendarTodayIcon,
-    Info as InfoIcon,
     Close as CloseIcon,
     Folder as FolderIcon,
     AccountCircle as AccountCircleIcon
@@ -148,12 +139,6 @@ const TeamList = () => {
     // Handle page change for pagination
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
-    };
-
-    // Handle rows per page change
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
     };
 
     // Handle sorting

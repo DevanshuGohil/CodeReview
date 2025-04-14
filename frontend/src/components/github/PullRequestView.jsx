@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../axiosConfig';
 import PullRequestDetails from './PullRequestDetails';
 import FileChangesList from './FileChangesList';

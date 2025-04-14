@@ -10,7 +10,6 @@ import {
     Typography,
     Box,
     Button,
-    Paper,
     Table,
     TableBody,
     TableCell,
@@ -21,14 +20,9 @@ import {
     CardHeader,
     CardContent,
     Grid,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
     Alert,
     Divider,
     Chip,
-    Stack,
     TextField,
     IconButton,
     Tooltip,
@@ -162,7 +156,7 @@ const TeamDetail = () => {
         }
 
         try {
-            const response = await api.put(`/teams/${id}`, {
+            await api.put(`/teams/${id}`, {
                 name: editName,
                 description: editDescription
             });
