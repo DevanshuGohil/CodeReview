@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
  * with options for unified or side-by-side views
  */
 const CustomDiffViewer = ({ file }) => {
-    const [showFullContext, setShowFullContext] = useState(false);
+    const [showFullContext] = useState(false);
     const [showHunkHeaders, setShowHunkHeaders] = useState(true);
     const [viewMode, setViewMode] = useState('sideBySide'); // 'unified' or 'sideBySide'
 
@@ -147,7 +147,6 @@ const CustomDiffViewer = ({ file }) => {
 
             // Check if we have a deletion followed by additions
             if (current.type === 'deletion') {
-                let nextAdditionIndex = -1;
                 let bestMatch = null;
                 let maxSimilarity = 0;
 

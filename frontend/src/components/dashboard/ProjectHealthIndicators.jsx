@@ -2,18 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
     Card, CardContent, Typography, Box, Divider,
     CircularProgress, Alert, ButtonGroup, Button,
-    List, ListItem, ListItemText, ListItemIcon, Chip, Grid,
-    Paper, MenuItem, Select, FormControl, InputLabel,
-    Accordion, AccordionSummary, AccordionDetails
+    List, ListItem, ListItemText, ListItemIcon, Grid,
+    Paper, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import {
     CheckCircleOutline, WarningAmber, ErrorOutline,
-    ExpandMore, Check, Close, TrendingUp, TrendingDown, TrendingFlat
+    TrendingFlat
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
-import axios from 'axios';
-import TokenManager from '../../utils/tokenManager';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 
 const ProjectHealthIndicators = ({ userProjects, timeframeFilter }) => {

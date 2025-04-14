@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import api from '../../axiosConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../common/SnackbarProvider';
@@ -10,7 +10,6 @@ import {
     IconButton,
     TextField,
     Button,
-    Divider,
     Collapse,
     Stack,
     Tooltip,
@@ -18,7 +17,8 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions
+    DialogActions,
+    Alert
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -47,8 +47,25 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
     const { showSuccess, showError } = useSnackbar();
     const isOwner = currentUser && comment.user && currentUser._id === comment.user._id;
 
+    // Load all replies - this function needs to be defined before it's used in useEffects
+    const loadReplies = useCallback(async () => {
+        try {
+            setLoadingReplies(true);
+            console.log(`Loading replies for comment ${comment._id}...`);
+            const response = await api.get(`/comments/${comment._id}/replies`);
+            console.log(`Received ${response.data.length} replies for comment ${comment._id}:`, response.data);
+            setReplies(response.data);
+            setHasReplies(response.data.length > 0);
+            setLoadingReplies(false);
+        } catch (err) {
+            console.error('Error loading replies:', err);
+            setError(err.response?.data?.message || err.message);
+            setLoadingReplies(false);
+        }
+    }, [comment._id]);
+
     // Utility function to check if a reply is a duplicate
-    const isDuplicateReply = (replyId) => {
+    const isDuplicateReply = useCallback((replyId) => {
         // Check in the current replies state
         const existsInState = replies.some(r => r._id === replyId);
         if (existsInState) return true;
@@ -64,7 +81,7 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
         }
 
         return false;
-    };
+    }, [replies, comment._id]);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -110,7 +127,7 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
         if (showReplies) {
             loadReplies();
         }
-    }, [showReplies]);
+    }, [showReplies, loadReplies]);
 
     // Load replies to check if there are any
     useEffect(() => {
@@ -190,31 +207,14 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
             window.removeEventListener('comment-reply-deleted', handleReplyDeleted);
             console.log("Removed reply event listeners for comment:", comment._id);
         };
-    }, [comment._id]);
-
-    // Load all replies
-    const loadReplies = async () => {
-        try {
-            setLoadingReplies(true);
-            console.log(`Loading replies for comment ${comment._id}...`);
-            const response = await api.get(`/comments/${comment._id}/replies`);
-            console.log(`Received ${response.data.length} replies for comment ${comment._id}:`, response.data);
-            setReplies(response.data);
-            setHasReplies(response.data.length > 0);
-            setLoadingReplies(false);
-        } catch (err) {
-            console.error('Error loading replies:', err);
-            setError(err.response?.data?.message || err.message);
-            setLoadingReplies(false);
-        }
-    };
+    }, [comment._id, isDuplicateReply, loadReplies, showReplies]);
 
     // Handle editing a comment
     const handleSaveEdit = async () => {
         if (!editContent.trim()) return;
 
         try {
-            const response = await api.put(`/comments/${comment._id}`, {
+            await api.put(`/comments/${comment._id}`, {
                 content: editContent
             });
 
@@ -322,10 +322,9 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
     const ReplyItem = ({ reply, parentId, onDelete }) => {
         const [isEditingReply, setIsEditingReply] = useState(false);
         const [editReplyContent, setEditReplyContent] = useState('');
-        const [error, setError] = useState(null);
+        const [replyError, setReplyError] = useState(null);
 
         const { currentUser } = useAuth();
-        const { showSuccess, showError } = useSnackbar();
         const isOwner = currentUser && reply.user && currentUser._id === reply.user._id;
 
         // Handle editing a reply
@@ -358,9 +357,11 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                     }
                 });
                 window.dispatchEvent(event);
+                showSuccess('Reply updated successfully');
             } catch (err) {
                 console.error('Error updating reply:', err);
-                setError(err.response?.data?.message || err.message);
+                setReplyError(err.response?.data?.message || err.message);
+                showError(err.response?.data?.message || err.message);
             }
         };
 
@@ -479,9 +480,9 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                     </Typography>
                 )}
 
-                {error && (
+                {replyError && (
                     <Typography variant="caption" color="error" sx={{ pl: 4 }}>
-                        {error}
+                        {replyError}
                     </Typography>
                 )}
             </Box>
@@ -609,6 +610,12 @@ const PRComment = forwardRef(({ comment, projectId, pullNumber, onReply }, ref) 
                 >
                     {comment.content}
                 </Typography>
+            )}
+
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                </Alert>
             )}
 
             {/* File location if available */}

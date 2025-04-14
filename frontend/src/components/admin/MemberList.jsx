@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Box,
     Typography,
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Chip,
@@ -24,23 +23,16 @@ import {
     MenuItem,
     Stack,
     TextField,
-    CircularProgress,
-    InputAdornment,
-    TablePagination,
-    TableSortLabel,
-    Grid
+    TableSortLabel
 } from '@mui/material';
 import {
-    Person as PersonIcon,
-    AdminPanelSettings as AdminIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
     Engineering as EngineerIcon,
+    AdminPanelSettings as AdminIcon,
     SupervisorAccount as ManagerIcon,
     Upload as UploadIcon,
-    FileUpload as FileUploadIcon,
     Search as SearchIcon,
-    ArrowUpward as ArrowUpwardIcon,
     KeyboardArrowLeft as KeyboardArrowLeftIcon,
     KeyboardArrowRight as KeyboardArrowRightIcon
 } from '@mui/icons-material';
@@ -72,7 +64,6 @@ const MemberList = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [orderBy, setOrderBy] = useState('name');
     const [order, setOrder] = useState('asc');
-    const fileInputRef = useRef(null);
     const { showSuccess, showError } = useSnackbar();
 
     const fetchUsers = useCallback(async () => {
@@ -160,11 +151,6 @@ const MemberList = () => {
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
     };
 
     const handleRequestSort = (property) => {

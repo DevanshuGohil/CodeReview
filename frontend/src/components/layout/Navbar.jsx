@@ -27,7 +27,6 @@ import {
     Dashboard as DashboardIcon,
     Group as GroupIcon,
     Code as CodeIcon,
-    AdminPanelSettings as AdminIcon,
     AccountCircle,
     Logout as LogoutIcon,
     People as PeopleIcon
@@ -37,7 +36,6 @@ const Navbar = () => {
     const { isAuthenticated, currentUser, logout } = useAuth();
     const navigate = useNavigate();
     const [anchorElUser, setAnchorElUser] = useState(null);
-    const [anchorElAdmin, setAnchorElAdmin] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const handleLogout = () => {
@@ -53,14 +51,6 @@ const Navbar = () => {
 
     const handleCloseUserMenu = () => {
         setAnchorElUser(null);
-    };
-
-    const handleOpenAdminMenu = (event) => {
-        setAnchorElAdmin(event.currentTarget);
-    };
-
-    const handleCloseAdminMenu = () => {
-        setAnchorElAdmin(null);
     };
 
     const handleDrawerToggle = () => {

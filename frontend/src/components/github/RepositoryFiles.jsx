@@ -1,7 +1,6 @@
 // components/github/RepositoryFiles.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
-import axios from '../../axiosConfig';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
     Typography,
@@ -20,7 +19,6 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions,
     IconButton
 } from '@mui/material';
 import {
@@ -36,7 +34,6 @@ import {
 } from '@mui/icons-material';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../common/SnackbarProvider';
 
 const RepositoryFiles = () => {
@@ -53,7 +50,6 @@ const RepositoryFiles = () => {
     const navigate = useNavigate();
     const [currentPath, setCurrentPath] = useState('');
     const [gitProvider, setGitProvider] = useState('github'); // Default to GitHub
-    const { currentUser } = useAuth();
     const { showSuccess, showError } = useSnackbar();
 
     // Parse path from URL if present
@@ -110,7 +106,7 @@ const RepositoryFiles = () => {
         if (projectId) {
             fetchData();
         }
-    }, [projectId, currentPath, gitProvider]);
+    }, [projectId, currentPath, gitProvider, showError]);
 
     const navigateToFolder = (path) => {
         setCurrentPath(path);

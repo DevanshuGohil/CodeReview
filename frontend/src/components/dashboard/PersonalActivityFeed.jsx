@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Paper,
     Typography,
@@ -79,7 +79,7 @@ const PersonalActivityFeed = () => {
     const [activities, setActivities] = useState([]);
     const [timeframe, setTimeframe] = useState('week');
 
-    const fetchActivities = async () => {
+    const fetchActivities = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -115,11 +115,11 @@ const PersonalActivityFeed = () => {
             setActivities(filteredActivities);
             setLoading(false);
         }, 1000);
-    };
+    }, [timeframe]);
 
     useEffect(() => {
         fetchActivities();
-    }, [timeframe]);
+    }, [fetchActivities]);
 
     const handleRefresh = () => {
         fetchActivities();

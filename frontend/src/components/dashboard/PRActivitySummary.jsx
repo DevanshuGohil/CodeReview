@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Paper,
@@ -19,11 +19,9 @@ import {
     Person as PersonIcon,
     Loop as RefreshIcon
 } from '@mui/icons-material';
-import { formatDistanceToNow } from 'date-fns';
 
 // Mock data for the PR Activity Summary
 const getMockSummary = (timeframe) => {
-    const now = new Date();
     const days = timeframe === 'day' ? 1 : timeframe === 'week' ? 7 : 30;
     const factor = days / 7; // Scaling factor based on timeframe
 
@@ -49,7 +47,7 @@ const PRActivitySummary = () => {
     const [summary, setSummary] = useState(null);
     const [timeframe, setTimeframe] = useState('week');
 
-    const fetchSummary = async () => {
+    const fetchSummary = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -63,11 +61,11 @@ const PRActivitySummary = () => {
             setError(err.message || 'Failed to load PR activity data');
             setLoading(false);
         }
-    };
+    }, [timeframe]);
 
     useEffect(() => {
         fetchSummary();
-    }, [timeframe]);
+    }, [fetchSummary]);
 
     const handleRefresh = () => {
         fetchSummary();

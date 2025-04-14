@@ -2,21 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
-import TeamSelector from '../teams/TeamSelector';
 import { useAuth } from '../../context/AuthContext';
 import {
     Container,
     Typography,
     TextField,
     Button,
-    Paper,
     Box,
     Alert,
     Grid,
-    FormGroup,
     FormControlLabel,
     Checkbox,
-    Divider,
     Card,
     CardContent,
     CardHeader,

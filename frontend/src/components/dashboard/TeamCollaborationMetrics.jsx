@@ -6,8 +6,6 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, Sector } from 'recharts';
-import axios from 'axios';
-import TokenManager from '../../utils/tokenManager';
 import { formatDistanceToNow } from 'date-fns';
 
 const TeamCollaborationMetrics = ({ team, timeframeFilter }) => {

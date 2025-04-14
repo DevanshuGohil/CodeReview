@@ -92,21 +92,6 @@ const theme = createTheme({
   },
 });
 
-// Protected route component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, requirePasswordChange } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (requirePasswordChange) {
-    return <Navigate to="/reset-password" replace />;
-  }
-
-  return children;
-};
-
 // Public route component - redirects to dashboard if user is already logged in
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, requirePasswordChange } = useAuth();
@@ -283,9 +268,11 @@ const ProtectedLayout = ({ children }) => {
 };
 
 // Auth redirect component - decides where to redirect based on auth status
+/*
 const AuthRedirect = () => {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
 };
+*/
 
 export default App;

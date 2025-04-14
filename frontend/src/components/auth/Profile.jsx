@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../axiosConfig';
 import {
@@ -10,7 +9,6 @@ import {
     TextField,
     Button,
     Box,
-    Divider,
     Alert,
     CircularProgress,
     InputAdornment,
@@ -25,7 +23,6 @@ import {
 
 const Profile = () => {
     const { currentUser, setUser } = useAuth();
-    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
         email: '',

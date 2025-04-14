@@ -16,12 +16,10 @@ import {
     ListItemText,
     Divider,
     Skeleton,
-    Alert,
-    Stack
+    Alert
 } from '@mui/material';
 import {
-    Add as AddIcon,
-    Group as GroupIcon
+    Add as AddIcon
 } from '@mui/icons-material';
 import PRActivitySummary from './dashboard/PRActivitySummary';
 import TeamCollaborationMetrics from './dashboard/TeamCollaborationMetrics';
@@ -34,7 +32,7 @@ const Dashboard = () => {
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [timeframe, setTimeframe] = useState('all');
+    const [timeframe] = useState('all');
     const [userProjects, setUserProjects] = useState([]);
 
     useEffect(() => {

@@ -1,22 +1,19 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Breadcrumbs as MuiBreadcrumbs, Typography, Box, Link as MuiLink, Chip } from '@mui/material';
+import { Breadcrumbs as MuiBreadcrumbs, Typography, Box, Link as MuiLink } from '@mui/material';
 import {
     Dashboard as DashboardIcon,
     Group as TeamIcon,
     Category as ProjectIcon,
-    GitHub as GitHubIcon,
     MergeType as PRIcon,
     Code as CodeIcon,
     Person as PersonIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../axiosConfig';
 
 const Breadcrumbs = () => {
     const location = useLocation();
     const params = useParams();
-    const { currentUser } = useAuth();
     const [projectName, setProjectName] = useState('');
     const [teamName, setTeamName] = useState('');
 

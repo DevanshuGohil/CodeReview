@@ -43,12 +43,15 @@ const getUserId = () => {
     }
 };
 
-// Export all functions
-export default {
+// Create a named object for the token manager
+const tokenManager = {
     getToken,
     setToken,
     removeToken,
     hasToken,
     getAuthHeader,
     getUserId
-}; 
+};
+
+// Export the named object
+export default tokenManager; 

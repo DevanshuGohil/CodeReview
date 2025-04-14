@@ -61,9 +61,7 @@ const PRApprovalPanel = ({ projectId, pullRequest }) => {
 
             // Set a timeout to show a message if loading takes too long
             const timeoutId = setTimeout(() => {
-                if (loading) {
-                    setIsLoadingTooLong(true);
-                }
+                setIsLoadingTooLong(true);
             }, 5000);
 
             const pullNumber = pullRequest.number;
@@ -110,7 +108,8 @@ const PRApprovalPanel = ({ projectId, pullRequest }) => {
             setError(err.response?.data?.message || err.message);
             setLoading(false);
         }
-    }, [projectId, pullRequest, currentUser]); // Remove loading from dependencies
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId, pullRequest, currentUser]); // Intentionally omitting loading to prevent loop
 
     // Set up one-time fetch and refresh interval
     useEffect(() => {
@@ -143,29 +142,6 @@ const PRApprovalPanel = ({ projectId, pullRequest }) => {
             if (interval) clearInterval(interval);
         };
     }, [fetchApprovalData, pullRequest, projectId, currentUser]);
-
-    // Add debug function to inspect approval data
-    const logApprovalData = () => {
-        if (approvalStatus) {
-            console.log('Approval Status:', approvalStatus);
-            console.log('Team Approvals:', approvalStatus.teamApprovals);
-            approvalStatus.teamApprovals.forEach((team, index) => {
-                console.log(`Team ${index + 1}: ${team.teamName}`);
-                console.log(`  - Approved: ${team.approved}`);
-                console.log(`  - Approvers: ${team.approvers.length}`);
-                team.approvers.forEach(approver => {
-                    console.log(`    - ${approver.name}`);
-                });
-            });
-        }
-    };
-
-    // Debug: Log approval data whenever it changes
-    useEffect(() => {
-        if (approvalStatus) {
-            logApprovalData();
-        }
-    }, [approvalStatus]);
 
     // Handle submitting a review
     const handleSubmitReview = async (approved) => {
@@ -213,7 +189,7 @@ const PRApprovalPanel = ({ projectId, pullRequest }) => {
 
             const pullNumber = pullRequest.number;
 
-            const response = await api.post(`/projects/${projectId}/pulls/${pullNumber}/merge`, {
+            await api.post(`/projects/${projectId}/pulls/${pullNumber}/merge`, {
                 commitMessage: mergeMessage || undefined
             });
 
