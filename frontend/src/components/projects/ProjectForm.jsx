@@ -156,8 +156,8 @@ const ProjectForm = () => {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
-            <Typography variant="h3" component="h1" gutterBottom color="text.primary" sx={{ mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 } }}>
+            <Typography variant="h3" component="h1" gutterBottom color="text.primary" sx={{ mb: 4, fontSize: { xs: '1.8rem', md: '2.2rem' } }}>
                 Create New Project
             </Typography>
 
@@ -189,7 +189,14 @@ const ProjectForm = () => {
                                         borderColor: 'rgba(255, 255, 255, 0.5)',
                                     },
                                 },
-                                mb: 3
+                                mb: 3,
+                                '& .MuiInputBase-input': {
+                                    fontSize: { xs: '1rem', md: '1rem' },
+                                    padding: { xs: '14px 14px', md: '16.5px 14px' },
+                                },
+                                '& .MuiInputLabel-root': {
+                                    fontSize: { xs: '1rem', md: '1rem' }
+                                }
                             }}
                         />
 
@@ -211,7 +218,14 @@ const ProjectForm = () => {
                                         borderColor: 'rgba(255, 255, 255, 0.5)',
                                     },
                                 },
-                                mb: 0.5
+                                mb: 0.5,
+                                '& .MuiInputBase-input': {
+                                    fontSize: { xs: '1rem', md: '1rem' },
+                                    padding: { xs: '14px 14px', md: '16.5px 14px' },
+                                },
+                                '& .MuiInputLabel-root': {
+                                    fontSize: { xs: '1rem', md: '1rem' }
+                                }
                             }}
                         />
                         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', ml: 1.5 }}>
@@ -238,6 +252,12 @@ const ProjectForm = () => {
                                     '&:hover fieldset': {
                                         borderColor: 'rgba(255, 255, 255, 0.5)',
                                     },
+                                },
+                                '& .MuiInputBase-input': {
+                                    fontSize: { xs: '1rem', md: '1rem' }
+                                },
+                                '& .MuiInputLabel-root': {
+                                    fontSize: { xs: '1rem', md: '1rem' }
                                 }
                             }}
                         />
@@ -255,14 +275,14 @@ const ProjectForm = () => {
                                 title="Teams"
                                 sx={{
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-                                    py: 1.5,
+                                    py: { xs: 1, md: 1.5 },
                                     '& .MuiCardHeader-title': {
                                         color: 'text.primary',
-                                        fontSize: '1.1rem'
+                                        fontSize: { xs: '1rem', md: '1.1rem' }
                                     }
                                 }}
                             />
-                            <CardContent sx={{ bgcolor: 'background.default' }}>
+                            <CardContent sx={{ bgcolor: 'background.default', p: { xs: 1.5, md: 2 } }}>
                                 {teams.length === 0 ? (
                                     <Typography color="text.secondary">
                                         No teams available. {currentUser?.role === 'manager' || currentUser?.role === 'admin' ? (
@@ -284,12 +304,21 @@ const ProjectForm = () => {
                                                                 color: 'rgba(255, 255, 255, 0.7)',
                                                                 '&.Mui-checked': {
                                                                     color: 'primary.main',
+                                                                },
+                                                                padding: { xs: '9px', md: '9px' },
+                                                                '& .MuiSvgIcon-root': {
+                                                                    fontSize: { xs: '1.2rem', md: '1.2rem' }
                                                                 }
                                                             }}
                                                         />
                                                     }
                                                     label={team.name}
-                                                    sx={{ color: 'text.primary' }}
+                                                    sx={{
+                                                        color: 'text.primary',
+                                                        '& .MuiFormControlLabel-label': {
+                                                            fontSize: { xs: '0.9rem', md: '1rem' }
+                                                        }
+                                                    }}
                                                 />
                                             </Grid>
                                         ))}
@@ -311,14 +340,14 @@ const ProjectForm = () => {
                                 title="GitHub Repository"
                                 sx={{
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-                                    py: 1.5,
+                                    py: { xs: 1, md: 1.5 },
                                     '& .MuiCardHeader-title': {
                                         color: 'text.primary',
-                                        fontSize: '1.1rem'
+                                        fontSize: { xs: '1rem', md: '1.1rem' }
                                     }
                                 }}
                             />
-                            <CardContent sx={{ bgcolor: 'background.default' }}>
+                            <CardContent sx={{ bgcolor: 'background.default', p: { xs: 1.5, md: 2 } }}>
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={6}>
                                         <TextField
@@ -339,6 +368,13 @@ const ProjectForm = () => {
                                                         borderColor: 'rgba(255, 255, 255, 0.5)',
                                                     },
                                                 },
+                                                '& .MuiInputBase-input': {
+                                                    fontSize: { xs: '1rem', md: '1rem' },
+                                                    padding: { xs: '14px 14px', md: '16.5px 14px' },
+                                                },
+                                                '& .MuiInputLabel-root': {
+                                                    fontSize: { xs: '1rem', md: '1rem' }
+                                                }
                                             }}
                                         />
                                     </Grid>
@@ -361,6 +397,13 @@ const ProjectForm = () => {
                                                         borderColor: 'rgba(255, 255, 255, 0.5)',
                                                     },
                                                 },
+                                                '& .MuiInputBase-input': {
+                                                    fontSize: { xs: '1rem', md: '1rem' },
+                                                    padding: { xs: '14px 14px', md: '16.5px 14px' },
+                                                },
+                                                '& .MuiInputLabel-root': {
+                                                    fontSize: { xs: '1rem', md: '1rem' }
+                                                }
                                             }}
                                         />
                                     </Grid>
@@ -373,19 +416,28 @@ const ProjectForm = () => {
                     </Grid>
 
                     {/* Buttons section */}
-                    <Grid item xs={12} sx={{ textAlign: 'right' }}>
+                    <Grid item xs={12} sx={{
+                        textAlign: { xs: 'center', md: 'right' },
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        justifyContent: { xs: 'center', md: 'flex-end' },
+                        gap: { xs: 2, md: 2 }
+                    }}>
                         <Button
                             variant="outlined"
                             component={Link}
                             to="/projects"
                             sx={{
-                                mr: 2,
                                 borderColor: 'rgba(255, 255, 255, 0.23)',
                                 color: 'text.primary',
                                 '&:hover': {
                                     borderColor: 'rgba(255, 255, 255, 0.5)',
                                     backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                                }
+                                },
+                                py: { xs: 1.2, md: 1 },
+                                px: { xs: 3, md: 2 },
+                                width: { xs: '100%', md: 'auto' },
+                                fontSize: { xs: '0.95rem', md: '0.875rem' }
                             }}
                             disabled={isSubmitting}
                         >
@@ -400,7 +452,11 @@ const ProjectForm = () => {
                                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.4)',
                                 '&:hover': {
                                     boxShadow: '0 6px 10px rgba(0, 0, 0, 0.6)'
-                                }
+                                },
+                                py: { xs: 1.2, md: 1 },
+                                px: { xs: 3, md: 2 },
+                                width: { xs: '100%', md: 'auto' },
+                                fontSize: { xs: '0.95rem', md: '0.875rem' }
                             }}
                         >
                             {isSubmitting ? (

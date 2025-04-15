@@ -1,14 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Breadcrumbs as MuiBreadcrumbs, Typography, Box, Link as MuiLink } from '@mui/material';
-import {
-    Dashboard as DashboardIcon,
-    Group as TeamIcon,
-    Category as ProjectIcon,
-    MergeType as PRIcon,
-    Code as CodeIcon,
-    Person as PersonIcon
-} from '@mui/icons-material';
 import api from '../../axiosConfig';
 
 const Breadcrumbs = () => {
@@ -62,7 +54,6 @@ const Breadcrumbs = () => {
         // Always add home/dashboard as first item
         breadcrumbItems.push({
             label: 'Dashboard',
-            icon: <DashboardIcon fontSize="small" sx={{ mr: 0.5 }} />,
             href: '/dashboard'
         });
 
@@ -83,14 +74,12 @@ const Breadcrumbs = () => {
                         // Teams list
                         breadcrumbItems.push({
                             label: 'Teams',
-                            icon: <TeamIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/teams'
                         });
                     } else if (pathParts[i + 1] === 'new') {
                         // New team form
                         breadcrumbItems.push({
                             label: 'Teams',
-                            icon: <TeamIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/teams'
                         });
                         breadcrumbItems.push({
@@ -102,7 +91,6 @@ const Breadcrumbs = () => {
                         // Team detail
                         breadcrumbItems.push({
                             label: 'Teams',
-                            icon: <TeamIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/teams'
                         });
                         breadcrumbItems.push({
@@ -119,14 +107,12 @@ const Breadcrumbs = () => {
                         // Projects list
                         breadcrumbItems.push({
                             label: 'Projects',
-                            icon: <ProjectIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/projects'
                         });
                     } else if (pathParts[i + 1] === 'new') {
                         // New project form
                         breadcrumbItems.push({
                             label: 'Projects',
-                            icon: <ProjectIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/projects'
                         });
                         breadcrumbItems.push({
@@ -138,7 +124,6 @@ const Breadcrumbs = () => {
                         // Project detail or sub-pages
                         breadcrumbItems.push({
                             label: 'Projects',
-                            icon: <ProjectIcon fontSize="small" sx={{ mr: 0.5 }} />,
                             href: '/projects'
                         });
                         breadcrumbItems.push({
@@ -158,7 +143,6 @@ const Breadcrumbs = () => {
                                         // Specific pull request
                                         breadcrumbItems.push({
                                             label: 'Pull Requests',
-                                            icon: <PRIcon fontSize="small" sx={{ mr: 0.5 }} />,
                                             href: `/projects/${pathParts[i - 1]}/pulls`
                                         });
                                         breadcrumbItems.push({
@@ -170,7 +154,6 @@ const Breadcrumbs = () => {
                                         // Pull requests list
                                         breadcrumbItems.push({
                                             label: 'Pull Requests',
-                                            icon: <PRIcon fontSize="small" sx={{ mr: 0.5 }} />,
                                             href: currentPath
                                         });
                                     }
@@ -179,7 +162,6 @@ const Breadcrumbs = () => {
                                 case 'repository':
                                     breadcrumbItems.push({
                                         label: 'Repository Files',
-                                        icon: <CodeIcon fontSize="small" sx={{ mr: 0.5 }} />,
                                         href: currentPath
                                     });
                                     break;
@@ -201,7 +183,6 @@ const Breadcrumbs = () => {
                 case 'profile':
                     breadcrumbItems.push({
                         label: 'Profile',
-                        icon: <PersonIcon fontSize="small" sx={{ mr: 0.5 }} />,
                         href: '/profile'
                     });
                     break;
@@ -265,7 +246,6 @@ const Breadcrumbs = () => {
 
                     return isLast ? (
                         <Box sx={{ display: 'flex', alignItems: 'center' }} key={index}>
-                            {breadcrumb.icon}
                             <Typography
                                 color="primary"
                                 sx={{
@@ -293,7 +273,6 @@ const Breadcrumbs = () => {
                                 }
                             }}
                         >
-                            {breadcrumb.icon}
                             {breadcrumb.label}
                         </MuiLink>
                     );

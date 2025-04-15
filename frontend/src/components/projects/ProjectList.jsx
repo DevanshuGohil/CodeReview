@@ -177,45 +177,48 @@ const ProjectList = () => {
         setDetailLoading(true);
 
         try {
-            // Fetch detailed project data including teams with member information
-            console.log("Fetching project details for:", project._id);
+            // Fetch detailed project data
             const response = await api.get(`/projects/${project._id}`);
-            console.log("Project details response:", response.data);
+            const projectData = response.data;
 
-            // Create a copy of the project with full team data
-            const projectWithTeamDetails = { ...response.data };
+            // Fetch details for each team *concurrently* and merge the results
+            if (projectData.teams && projectData.teams.length > 0) {
+                const updatedTeams = await Promise.all(
+                    projectData.teams.map(async (projectTeam) => {
+                        // Ensure projectTeam and projectTeam.team exist before accessing _id
+                        const teamId = projectTeam?.team?._id;
+                        if (!teamId) {
+                            console.error("Team ID missing in project data:", projectTeam);
+                            return { ...projectTeam, team: { ...(projectTeam?.team || {}), members: [] } }; // Return original structure with empty members
+                        }
 
-            // Fetch team details for each team to get member counts
-            if (projectWithTeamDetails.teams && projectWithTeamDetails.teams.length > 0) {
-                console.log("Teams before fetching details:", projectWithTeamDetails.teams);
-
-                const teamPromises = projectWithTeamDetails.teams.map(async (team) => {
-                    try {
-                        console.log(`Fetching details for team ${team._id} (${team.name})`);
-                        const teamResponse = await api.get(`/teams/${team._id}`);
-                        const teamData = teamResponse.data;
-
-                        console.log(`Team ${team.name} details:`, teamData);
-                        console.log(`Team ${team.name} members:`, teamData.members || []);
-                        console.log(`Team ${team.name} member count:`, teamData.members ? teamData.members.length : 0);
-
-                        return teamData;
-                    } catch (error) {
-                        console.error(`Error fetching team ${team._id} details:`, error);
-                        return team; // Return original team if fetch fails
-                    }
-                });
-
-                // Wait for all team fetch operations to complete
-                const teamDetails = await Promise.all(teamPromises);
-                console.log("All team details fetched:", teamDetails);
-                projectWithTeamDetails.teams = teamDetails;
+                        try {
+                            const teamResponse = await api.get(`/teams/${teamId}`);
+                            // Return the original projectTeam object but add the members array from the fetched details
+                            return {
+                                ...projectTeam, // Keep original structure { team: {...}, accessLevel: ... }
+                                team: { // Merge members into the nested team object
+                                    ...(projectTeam.team),
+                                    members: teamResponse.data.members || [] // Add members array
+                                }
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching team ${teamId} details:`, error);
+                            // Return original structure but ensure members array exists (as empty) for consistent rendering
+                            return { ...projectTeam, team: { ...(projectTeam.team || {}), members: [] } };
+                        }
+                    })
+                );
+                // Update the project data with the teams that now include member details
+                projectData.teams = updatedTeams;
             }
 
-            setSelectedProject(projectWithTeamDetails);
+            setSelectedProject(projectData); // Set the fully updated project data
         } catch (err) {
             console.error("Error fetching project details:", err);
-            // Keep the basic project data if the detailed fetch fails
+            // Revert to basic data if detailed fetch fails
+            setSelectedProject(project);
+            showError('Failed to load full project details.');
         } finally {
             setDetailLoading(false);
         }
@@ -239,8 +242,8 @@ const ProjectList = () => {
     return (
         <Box sx={{ p: 3, maxWidth: '100%', bgcolor: '#161616', minHeight: '100vh' }}>
             {/* Header with title and create button */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4" component="h1" sx={{ color: 'white', fontSize: '2.5rem', fontWeight: 400 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Typography variant="h4" component="h1" sx={{ color: 'white', fontSize: '2.5rem', fontWeight: 400, mb: { xs: 2, sm: 0 } }}>
                     Projects
                 </Typography>
                 {currentUser?.role === 'manager' && (
@@ -254,7 +257,8 @@ const ProjectList = () => {
                             borderRadius: 2,
                             bgcolor: '#2196f3',
                             px: 3,
-                            py: 1
+                            py: 1,
+                            width: { xs: '100%', sm: 'auto' }
                         }}
                     >
                         Create Project
@@ -263,7 +267,7 @@ const ProjectList = () => {
             </Box>
 
             {/* Search bar and results count */}
-            <Box sx={{ display: 'flex', mb: 4, gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', mb: 4, gap: 2, alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' } }}>
                 <Box
                     sx={{
                         position: 'relative',
@@ -273,7 +277,7 @@ const ProjectList = () => {
                         py: 0.5,
                         display: 'flex',
                         alignItems: 'center',
-                        width: 300,
+                        width: { xs: '100%', sm: 300 },
                         maxWidth: '100%',
                         bgcolor: 'rgba(0, 0, 0, 0.2)'
                     }}
@@ -295,13 +299,13 @@ const ProjectList = () => {
                         }}
                     />
                 </Box>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' } }}>
                     {filteredProjects.length} projects found
                 </Typography>
             </Box>
 
-            {/* Projects table */}
-            <Box sx={{ mb: 3, bgcolor: '#1e1e1e', borderRadius: 1, overflow: 'hidden' }}>
+            {/* Desktop Projects table - hidden on mobile */}
+            <Box sx={{ mb: 3, bgcolor: '#1e1e1e', borderRadius: 1, overflow: 'hidden', display: { xs: 'none', md: 'block' } }}>
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -552,69 +556,194 @@ const ProjectList = () => {
                         )}
                     </TableBody>
                 </Table>
+            </Box>
 
-                {/* Pagination footer */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        p: 2,
-                        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
-                            Rows per page:
-                        </Typography>
-                        <select
-                            value={rowsPerPage}
-                            onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                            style={{
-                                background: 'transparent',
-                                color: 'white',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: '4px',
-                                padding: '4px 8px'
+            {/* Mobile Projects Cards - shown only on mobile */}
+            <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 3 }}>
+                {paginatedProjects.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 4, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        No projects found
+                    </Box>
+                ) : (
+                    <Stack spacing={2}>
+                        {paginatedProjects.map((project) => (
+                            <Box
+                                key={project._id}
+                                sx={{
+                                    bgcolor: '#1e1e1e',
+                                    borderRadius: 1,
+                                    p: 2,
+                                    '&:hover': { bgcolor: 'rgba(30, 30, 30, 0.8)', cursor: 'pointer' }
+                                }}
+                                onClick={() => handleRowClick(project)}
+                            >
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                    <Box>
+                                        <Typography variant="h6" color="white">{project.name}</Typography>
+                                        <Chip
+                                            label={project.key}
+                                            size="small"
+                                            sx={{ bgcolor: 'rgba(33, 150, 243, 0.1)', color: '#2196f3', mt: 1 }}
+                                        />
+                                    </Box>
+                                    <Stack direction="row" spacing={1}>
+                                        <IconButton
+                                            component={Link}
+                                            to={`/projects/${project._id}`}
+                                            size="small"
+                                            sx={{
+                                                color: '#2196f3',
+                                                bgcolor: 'rgba(33, 150, 243, 0.1)',
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <VisibilityIcon fontSize="small" />
+                                        </IconButton>
+                                        {canManageProject && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openDeleteDialog(project);
+                                                }}
+                                                sx={{
+                                                    color: '#f44336',
+                                                    bgcolor: 'rgba(244, 67, 54, 0.1)',
+                                                }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        )}
+                                    </Stack>
+                                </Box>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        mb: 2,
+                                        display: '-webkit-box',
+                                        overflow: 'hidden',
+                                        WebkitBoxOrient: 'vertical',
+                                        WebkitLineClamp: 2,
+                                    }}
+                                >
+                                    {project.description || 'No description'}
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <GroupIcon fontSize="small" sx={{ color: 'rgba(255, 255, 255, 0.5)', mr: 1 }} />
+                                            <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
+                                                {project.teams.length} teams
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <CalendarTodayIcon fontSize="small" sx={{ color: 'rgba(255, 255, 255, 0.5)', mr: 1 }} />
+                                            <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
+                                                {project.createdAt ? (
+                                                    new Date(project.createdAt).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })
+                                                ) : (
+                                                    'N/A'
+                                                )}
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
+                                {project.githubRepo?.url && (
+                                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+                                        <GitHubIcon fontSize="small" sx={{ color: '#2196f3', mr: 1 }} />
+                                        <Typography
+                                            variant="body2"
+                                            component="a"
+                                            href={project.githubRepo.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            sx={{
+                                                color: '#2196f3',
+                                                textDecoration: 'none',
+                                                '&:hover': { textDecoration: 'underline' }
+                                            }}
+                                        >
+                                            View Repository
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        ))}
+                    </Stack>
+                )}
+            </Box>
+
+            {/* Pagination footer */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    p: 2,
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: { xs: 2, sm: 0 }
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
+                        Rows per page:
+                    </Typography>
+                    <select
+                        value={rowsPerPage}
+                        onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                        style={{
+                            background: 'transparent',
+                            color: 'white',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            padding: '4px 8px'
+                        }}
+                    >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                    </select>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
+                        {page * rowsPerPage + 1}–{Math.min((page + 1) * rowsPerPage, filteredProjects.length)} of {filteredProjects.length}
+                    </Typography>
+                    <Box sx={{ display: 'flex' }}>
+                        <IconButton
+                            onClick={() => handleChangePage(null, page - 1)}
+                            disabled={page === 0}
+                            sx={{
+                                color: page === 0 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
+                                p: 1
                             }}
                         >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                        </select>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mr: 2 }}>
-                            {page * rowsPerPage + 1}–{Math.min((page + 1) * rowsPerPage, filteredProjects.length)} of {filteredProjects.length}
-                        </Typography>
-                        <Box sx={{ display: 'flex' }}>
-                            <IconButton
-                                onClick={() => handleChangePage(null, page - 1)}
-                                disabled={page === 0}
-                                sx={{
-                                    color: page === 0 ? 'rgba(255, 255, 255, 0.3)' : 'white',
-                                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
-                                    p: 1
-                                }}
-                            >
-                                <KeyboardArrowLeftIcon />
-                            </IconButton>
-                            <IconButton
-                                onClick={() => handleChangePage(null, page + 1)}
-                                disabled={page >= Math.ceil(filteredProjects.length / rowsPerPage) - 1}
-                                sx={{
-                                    color: page >= Math.ceil(filteredProjects.length / rowsPerPage) - 1
-                                        ? 'rgba(255, 255, 255, 0.3)'
-                                        : 'white',
-                                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
-                                    p: 1
-                                }}
-                            >
-                                <KeyboardArrowRightIcon />
-                            </IconButton>
-                        </Box>
+                            <KeyboardArrowLeftIcon />
+                        </IconButton>
+                        <IconButton
+                            onClick={() => handleChangePage(null, page + 1)}
+                            disabled={page >= Math.ceil(filteredProjects.length / rowsPerPage) - 1}
+                            sx={{
+                                color: page >= Math.ceil(filteredProjects.length / rowsPerPage) - 1
+                                    ? 'rgba(255, 255, 255, 0.3)'
+                                    : 'white',
+                                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' },
+                                p: 1
+                            }}
+                        >
+                            <KeyboardArrowRightIcon />
+                        </IconButton>
                     </Box>
                 </Box>
             </Box>
@@ -774,45 +903,42 @@ const ProjectList = () => {
 
                                         {selectedProject.teams && selectedProject.teams.length > 0 ? (
                                             <List disablePadding>
-                                                {selectedProject.teams.map(team => (
-                                                    <ListItem
-                                                        key={team._id}
-                                                        disablePadding
-                                                        sx={{
-                                                            mb: 1,
-                                                            bgcolor: 'rgba(255, 255, 255, 0.05)',
-                                                            borderRadius: 1,
-                                                            p: 1
-                                                        }}
-                                                    >
-                                                        <ListItemIcon sx={{ minWidth: 36, color: '#2196f3' }}>
-                                                            <GroupIcon fontSize="small" />
-                                                        </ListItemIcon>
-                                                        <ListItemText
-                                                            primary={team.name}
-                                                            secondary={
-                                                                (() => {
-                                                                    // Calculate member count from the most reliable source
-                                                                    let memberCount = 0;
-                                                                    let countSource = "members";
-
-                                                                    if (team.members && Array.isArray(team.members)) {
-                                                                        memberCount = team.members.length;
-                                                                    } else if (team.memberCount !== undefined) {
-                                                                        memberCount = team.memberCount;
-                                                                    }
-
-                                                                    // Return appropriate message based on count
-                                                                    return memberCount > 0
-                                                                        ? `${memberCount} ${countSource}`
-                                                                        : "No members";
-                                                                })()
-                                                            }
-                                                            primaryTypographyProps={{ color: 'white' }}
-                                                            secondaryTypographyProps={{ color: 'rgba(255, 255, 255, 0.6)' }}
-                                                        />
-                                                    </ListItem>
-                                                ))}
+                                                {selectedProject.teams.map(projectTeam => {
+                                                    const team = projectTeam.team;
+                                                    if (!team) return null;
+                                                    return (
+                                                        <ListItem
+                                                            key={team._id}
+                                                            disablePadding
+                                                            sx={{
+                                                                mb: 1,
+                                                                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                                                borderRadius: 1,
+                                                                p: 1
+                                                            }}
+                                                        >
+                                                            <ListItemIcon sx={{ minWidth: 36, color: '#2196f3' }}>
+                                                                <GroupIcon fontSize="small" />
+                                                            </ListItemIcon>
+                                                            <ListItemText
+                                                                primary={team.name}
+                                                                secondary={
+                                                                    (() => {
+                                                                        let memberCount = 0;
+                                                                        if (team.members && Array.isArray(team.members)) {
+                                                                            memberCount = team.members.length;
+                                                                        } else if (typeof team.memberCount === 'number') {
+                                                                            memberCount = team.memberCount;
+                                                                        }
+                                                                        return memberCount === 1 ? "1 member" : `${memberCount} members`;
+                                                                    })()
+                                                                }
+                                                                primaryTypographyProps={{ color: 'white' }}
+                                                                secondaryTypographyProps={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                                                            />
+                                                        </ListItem>
+                                                    );
+                                                })}
                                             </List>
                                         ) : (
                                             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>

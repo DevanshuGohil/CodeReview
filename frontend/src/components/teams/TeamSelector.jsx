@@ -15,6 +15,9 @@ import api from '../../axiosConfig';
 const TeamSelector = ({
     value,
     onChange,
+    selectedTeam,
+    setSelectedTeam,
+    currentTeams = [],
     excludeTeams = [],
     label = "Team",
     size = "medium",
@@ -25,15 +28,33 @@ const TeamSelector = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Support both value/onChange and selectedTeam/setSelectedTeam interfaces
+    const actualValue = selectedTeam !== undefined ? selectedTeam : value;
+    const handleChange = (newValue) => {
+        if (setSelectedTeam) {
+            setSelectedTeam(newValue);
+        }
+        if (onChange) {
+            onChange(newValue);
+        }
+    };
+
+    // Extract complex dependencies into memoized values
+    const currentTeamsString = JSON.stringify(currentTeams);
+    const excludeTeamsString = JSON.stringify(excludeTeams);
+
     useEffect(() => {
         const fetchTeams = async () => {
             try {
                 setLoading(true);
                 const response = await api.get('/teams');
 
-                // Filter out excluded teams
+                // Filter out excluded teams and current teams
+                // Use the original arrays here as they are guaranteed to be stable
+                // due to the dependency array relying on stringified values.
+                const teamsToExclude = [...excludeTeams, ...(currentTeams || [])];
                 const filteredTeams = response.data.filter(
-                    team => !excludeTeams.includes(team._id)
+                    team => !teamsToExclude.includes(team._id)
                 );
 
                 setTeams(filteredTeams);
@@ -45,7 +66,9 @@ const TeamSelector = ({
         };
 
         fetchTeams();
-    }, [excludeTeams]);
+        // Only depend on the stringified versions to prevent infinite loops
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentTeamsString, excludeTeamsString]);
 
     if (loading) return (
         <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
@@ -81,8 +104,8 @@ const TeamSelector = ({
             <Select
                 labelId="team-select-label"
                 id="team-select"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
+                value={actualValue}
+                onChange={(e) => handleChange(e.target.value)}
                 label={label}
                 sx={{
                     color: 'white',

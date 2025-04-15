@@ -1,5 +1,5 @@
 // components/projects/ProjectDetail.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../axiosConfig';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import TeamSelector from '../teams/TeamSelector';
@@ -13,7 +13,6 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Card,
@@ -24,7 +23,6 @@ import {
     Divider,
     Chip,
     TextField,
-    Stack,
     IconButton,
     Tooltip,
     alpha,
@@ -37,14 +35,13 @@ import {
 import {
     Delete as DeleteIcon,
     ArrowBack as ArrowBackIcon,
-    GitHub as GitHubIcon,
-    Link as LinkIcon,
     Code as CodeIcon,
     MergeType as MergeTypeIcon,
-    Update as UpdateIcon,
     Edit as EditIcon,
     Save as SaveIcon,
-    Cancel as CancelIcon
+    Cancel as CancelIcon,
+    Group as GroupIcon,
+    People as PeopleIcon,
 } from '@mui/icons-material';
 
 const ProjectDetail = () => {
@@ -52,8 +49,9 @@ const ProjectDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedTeam, setSelectedTeam] = useState('');
-    const [githubOwner, setGithubOwner] = useState('');
-    const [githubRepo, setGithubRepo] = useState('');
+    // Keep the setters for future use without exposing the unused variables
+    const [, setGithubOwner] = useState('');
+    const [, setGithubRepo] = useState('');
     const [addingTeam, setAddingTeam] = useState(false);
 
     // Add project editing state
@@ -86,7 +84,7 @@ const ProjectDetail = () => {
                 setEditName(response.data.name || '');
                 setEditDescription(response.data.description || '');
 
-                // Set GitHub repo values if they exist
+                // Set GitHub repo values if they exist - keep for future use
                 if (response.data.githubRepo) {
                     setGithubOwner(response.data.githubRepo.owner || '');
                     setGithubRepo(response.data.githubRepo.repo || '');
@@ -101,6 +99,11 @@ const ProjectDetail = () => {
 
         fetchProject();
     }, [id]);
+
+    // Memoize the current teams array to avoid unnecessary re-renders of TeamSelector
+    const currentTeamsMemo = useMemo(() => {
+        return project?.teams ? project.teams.map(t => t.team._id) : [];
+    }, [project?.teams]);
 
     // Add edit project functions
     const handleStartEditing = () => {
@@ -204,27 +207,6 @@ const ProjectDetail = () => {
         setRemoveTeamDialogOpen(true);
     };
 
-    const handleUpdateGithubRepo = async (e) => {
-        e.preventDefault();
-
-        if (!canManageProject) {
-            setError("Only managers can update GitHub repository settings");
-            return;
-        }
-
-        try {
-            const response = await api.put(`/projects/${id}/github`, {
-                owner: githubOwner,
-                repo: githubRepo,
-                url: `https://github.com/${githubOwner}/${githubRepo}`
-            });
-
-            setProject(response.data);
-        } catch (err) {
-            setError(err.response?.data?.message || err.message);
-        }
-    };
-
     // Add deleteProject handler
     const handleDeleteProject = async () => {
         if (!canManageProject) {
@@ -246,10 +228,10 @@ const ProjectDetail = () => {
     if (!project) return <Container maxWidth="lg" sx={{ mt: 4 }}><Alert severity="warning">Project not found</Alert></Container>;
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 }, mb: 4 }}>
             {/* Header with Edit Functionality */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, mr: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 0 } }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, mr: { xs: 0, md: 2 }, width: '100%' }}>
                     {isEditing ? (
                         <TextField
                             label="Project Name"
@@ -262,17 +244,20 @@ const ProjectDetail = () => {
                                 sx: {
                                     color: 'white',
                                     '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.23)'
+                                        borderColor: 'rgba(255,255,255,0.3)'
                                     },
                                     '&:hover .MuiOutlinedInput-notchedOutline': {
                                         borderColor: 'rgba(255,255,255,0.5)'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#2196f3'
                                     }
                                 }
                             }}
                         />
                     ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="h4" component="h1" color="white">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                            <Typography variant="h4" component="h1" color="white" sx={{ fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
                                 {project.name}
                             </Typography>
                             <Chip
@@ -298,11 +283,11 @@ const ProjectDetail = () => {
                     {/* Description with Edit Functionality */}
                     {isEditing ? (
                         <TextField
-                            label="Project Description"
+                            label="Description"
                             variant="outlined"
                             fullWidth
                             multiline
-                            rows={3}
+                            rows={4}
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
                             InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
@@ -310,27 +295,25 @@ const ProjectDetail = () => {
                                 sx: {
                                     color: 'white',
                                     '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255,255,255,0.23)'
+                                        borderColor: 'rgba(255,255,255,0.3)'
                                     },
                                     '&:hover .MuiOutlinedInput-notchedOutline': {
                                         borderColor: 'rgba(255,255,255,0.5)'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#2196f3'
                                     }
                                 }
                             }}
                         />
-                    ) : project.description && (
-                        <Typography
-                            variant="body1"
-                            color="rgba(255,255,255,0.7)"
-                            paragraph
-                            sx={{ maxWidth: '800px', m: 0 }}
-                        >
-                            {project.description}
+                    ) : (
+                        <Typography variant="body1" color="rgba(255,255,255,0.7)" sx={{ mt: 1, fontSize: { xs: '0.95rem', md: '1rem' } }}>
+                            {project.description || 'No description provided'}
                         </Typography>
                     )}
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', width: { xs: '100%', md: 'auto' } }}>
                     {isEditing ? (
                         <>
                             <Button
@@ -339,7 +322,7 @@ const ProjectDetail = () => {
                                 startIcon={<SaveIcon />}
                                 onClick={handleSaveProjectDetails}
                                 disabled={!editName.trim()}
-                                sx={{ mr: 1 }}
+                                sx={{ mr: 1, flex: { xs: '1', md: 'none' } }}
                             >
                                 Save
                             </Button>
@@ -347,7 +330,7 @@ const ProjectDetail = () => {
                                 variant="outlined"
                                 startIcon={<CancelIcon />}
                                 onClick={handleCancelEditing}
-                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}
+                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', flex: { xs: '1', md: 'none' } }}
                             >
                                 Cancel
                             </Button>
@@ -359,7 +342,7 @@ const ProjectDetail = () => {
                                 to="/projects"
                                 startIcon={<ArrowBackIcon />}
                                 variant="outlined"
-                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', mr: 1 }}
+                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', mr: 1, flex: { xs: '1', md: 'none' } }}
                             >
                                 Back to Projects
                             </Button>
@@ -369,6 +352,7 @@ const ProjectDetail = () => {
                                     color="error"
                                     startIcon={<DeleteIcon />}
                                     onClick={() => setDeleteDialogOpen(true)}
+                                    sx={{ flex: { xs: '1', md: 'none' } }}
                                 >
                                     Delete Project
                                 </Button>
@@ -393,118 +377,167 @@ const ProjectDetail = () => {
             >
                 <CardHeader
                     title={
-                        <Typography variant="h5" color="white">Teams</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <GroupIcon sx={{ mr: 1, color: '#2196f3' }} />
+                                <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>Teams</Typography>
+                            </Box>
+                            <Typography variant="body2" color="rgba(255,255,255,0.6)">
+                                {project.teams ? project.teams.length : 0} teams assigned
+                            </Typography>
+                        </Box>
                     }
-                    sx={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}
+                    sx={{ borderBottom: '1px solid rgba(255,255,255,0.12)', py: { xs: 1.5, md: 2 } }}
                 />
-                <CardContent>
-                    {project.teams.length > 0 ? (
-                        <TableContainer sx={{ mb: 4 }}>
-                            <Table sx={{ '& .MuiTableCell-root': { borderColor: 'rgba(255,255,255,0.12)' } }}>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell sx={{ color: 'white' }}>Team</TableCell>
-                                        <TableCell sx={{ color: 'white' }}>Description</TableCell>
-                                        <TableCell sx={{ color: 'white' }}>Members</TableCell>
-                                        {canManageProject && <TableCell align="right" sx={{ color: 'white' }}>Actions</TableCell>}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {project.teams.map(teamData => (
-                                        <TableRow
-                                            key={teamData.team._id}
-                                            sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}
-                                        >
-                                            <TableCell>
-                                                <Button
-                                                    component={Link}
-                                                    to={`/teams/${teamData.team._id}`}
-                                                    color="primary"
-                                                    sx={{ textTransform: 'none' }}
-                                                >
-                                                    {teamData.team.name}
-                                                </Button>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography
-                                                    variant="body2"
-                                                    color="rgba(255,255,255,0.7)"
-                                                    sx={{
-                                                        maxWidth: 200,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}
-                                                >
-                                                    {teamData.team.description || 'No description'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={teamData.team.members && Array.isArray(teamData.team.members) ? teamData.team.members.length : 0}
-                                                    size="small"
-                                                    color="primary"
-                                                    variant="outlined"
-                                                    sx={{ minWidth: '60px', textAlign: 'center' }}
-                                                />
-                                            </TableCell>
-                                            {canManageProject && (
-                                                <TableCell align="right">
-                                                    <IconButton
-                                                        size="small"
-                                                        color="error"
-                                                        onClick={() => openRemoveTeamDialog(teamData.team)}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </TableCell>
-                                            )}
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    ) : (
-                        <Alert severity="info" sx={{ mb: 4, backgroundColor: 'rgba(41, 98, 255, 0.1)', color: 'white' }}>
-                            No teams assigned to this project.
-                            {canManageProject && " Add a team using the form below."}
-                        </Alert>
-                    )}
 
-                    {canManageProject && (
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                    {/* Teams list - show as a grid on mobile, table on desktop */}
+                    {project.teams && project.teams.length > 0 ? (
                         <>
-                            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
-                            <Box component="form" onSubmit={handleAddTeam} sx={{ width: '100%' }}>
-                                <Typography variant="h6" gutterBottom color="white">Add Team</Typography>
-                                <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={12} md={9}>
-                                        <TeamSelector
-                                            value={selectedTeam}
-                                            onChange={setSelectedTeam}
-                                            excludeTeams={project.teams.map(t => t.team._id)}
-                                            sx={{ width: '100%', minWidth: '300px' }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <Button
-                                            type="submit"
-                                            variant="contained"
-                                            color="primary"
-                                            disabled={!selectedTeam || addingTeam}
-                                            fullWidth
-                                            startIcon={addingTeam ? <CircularProgress size={20} color="inherit" /> : null}
-                                        >
-                                            {addingTeam ? 'Adding...' : 'Add Team'}
-                                        </Button>
-                                    </Grid>
+                            {/* Desktop view - table */}
+                            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                                <Table>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell sx={{ color: 'white' }}>Team Name</TableCell>
+                                            <TableCell sx={{ color: 'white' }}>Description</TableCell>
+                                            <TableCell sx={{ color: 'white' }}>Members</TableCell>
+                                            {canManageProject && <TableCell align="right" sx={{ color: 'white' }}>Actions</TableCell>}
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {project.teams.map(teamObj => {
+                                            const team = teamObj.team;
+                                            return (
+                                                <TableRow key={team._id}>
+                                                    <TableCell sx={{ color: 'white' }}>
+                                                        <Link to={`/teams/${team._id}`} style={{ color: '#2196f3', textDecoration: 'none' }}>
+                                                            {team.name}
+                                                        </Link>
+                                                    </TableCell>
+                                                    <TableCell sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                                                        {team.description || 'No description'}
+                                                    </TableCell>
+                                                    <TableCell sx={{ color: 'white' }}>
+                                                        <Chip
+                                                            icon={<PeopleIcon />}
+                                                            label={team.members ? team.members.length : 0}
+                                                            size="small"
+                                                            sx={{ bgcolor: 'rgba(33, 150, 243, 0.1)', color: '#2196f3' }}
+                                                        />
+                                                    </TableCell>
+                                                    {canManageProject && (
+                                                        <TableCell align="right">
+                                                            <IconButton
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => openRemoveTeamDialog(team)}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </TableCell>
+                                                    )}
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </Box>
+
+                            {/* Mobile view - cards grid */}
+                            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                                <Grid container spacing={2}>
+                                    {project.teams.map(teamObj => {
+                                        const team = teamObj.team;
+                                        return (
+                                            <Grid item xs={12} key={team._id}>
+                                                <Box sx={{
+                                                    bgcolor: 'rgba(30, 30, 30, 0.6)',
+                                                    p: 2,
+                                                    borderRadius: 1,
+                                                    position: 'relative'
+                                                }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                        <Typography variant="subtitle1" color="white">
+                                                            <Link to={`/teams/${team._id}`} style={{ color: '#2196f3', textDecoration: 'none' }}>
+                                                                {team.name}
+                                                            </Link>
+                                                        </Typography>
+                                                        {canManageProject && (
+                                                            <IconButton
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => openRemoveTeamDialog(team)}
+                                                                sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)' }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        )}
+                                                    </Box>
+                                                    <Typography variant="body2" color="rgba(255,255,255,0.7)" sx={{ mb: 1 }}>
+                                                        {team.description || 'No description'}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <PeopleIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.7)', mr: 0.5 }} />
+                                                        <Typography variant="body2" color="rgba(255,255,255,0.7)">
+                                                            {team.members ? team.members.length : 0} members
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Grid>
+                                        );
+                                    })}
                                 </Grid>
                             </Box>
                         </>
+                    ) : (
+                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', py: 2, textAlign: 'center' }}>
+                            No teams assigned to this project yet.{canManageProject && " Add a team using the form below."}
+                        </Typography>
+                    )}
+
+                    {/* Add Team Form */}
+                    {canManageProject && (
+                        <Box sx={{ mt: 3 }}>
+                            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
+                            <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', md: '1.25rem' } }}>Add Team to Project</Typography>
+
+                            <Box component="form" onSubmit={handleAddTeam} sx={{
+                                display: 'flex',
+                                flexDirection: { xs: 'column', md: 'row' },
+                                gap: 2,
+                                alignItems: { xs: 'stretch', md: 'flex-end' }
+                            }}>
+                                <TeamSelector
+                                    selectedTeam={selectedTeam}
+                                    setSelectedTeam={setSelectedTeam}
+                                    currentTeams={currentTeamsMemo}
+                                    sx={{ flexGrow: 1 }}
+                                />
+
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    color="primary"
+                                    disabled={!selectedTeam || addingTeam}
+                                    sx={{
+                                        minWidth: { xs: '100%', md: '150px' },
+                                        py: { xs: 1.2, md: 1 }
+                                    }}
+                                >
+                                    {addingTeam ? (
+                                        <CircularProgress size={24} sx={{ color: 'white' }} />
+                                    ) : (
+                                        'Add Team'
+                                    )}
+                                </Button>
+                            </Box>
+                        </Box>
                     )}
                 </CardContent>
             </Card>
 
-            {/* GitHub Repository Section */}
+            {/* PR Section */}
             <Card
                 variant="outlined"
                 sx={{
@@ -515,140 +548,61 @@ const ProjectDetail = () => {
             >
                 <CardHeader
                     title={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <GitHubIcon sx={{ color: 'white' }} />
-                            <Typography variant="h5" color="white">GitHub Repository</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <MergeTypeIcon sx={{ mr: 1, color: '#2196f3' }} />
+                            <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>Pull Requests</Typography>
                         </Box>
                     }
-                    sx={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}
+                    sx={{ borderBottom: '1px solid rgba(255,255,255,0.12)', py: { xs: 1.5, md: 2 } }}
                 />
-                <CardContent>
-                    {project.githubRepo && project.githubRepo.url ? (
-                        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography color="white">Current repository:</Typography>
-                            <Button
-                                href={project.githubRepo.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                startIcon={<LinkIcon />}
-                                sx={{ color: '#58a6ff', textTransform: 'none' }}
-                            >
-                                {project.githubRepo.owner}/{project.githubRepo.repo}
-                            </Button>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                    <Button
+                        component={Link}
+                        to={`/projects/${project._id}/pulls`}
+                        variant="contained"
+                        color="primary"
+                        startIcon={<MergeTypeIcon />}
+                        sx={{
+                            width: { xs: '100%', md: 'auto' },
+                            py: { xs: 1.2, md: 1 }
+                        }}
+                    >
+                        View Pull Requests
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Code Section */}
+            <Card
+                variant="outlined"
+                sx={{
+                    bgcolor: 'rgba(18, 18, 18, 0.9)',
+                    border: '1px solid rgba(255,255,255,0.12)'
+                }}
+            >
+                <CardHeader
+                    title={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CodeIcon sx={{ mr: 1, color: '#2196f3' }} />
+                            <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>Repository Code</Typography>
                         </Box>
-                    ) : (
-                        <Typography color="rgba(255,255,255,0.7)" sx={{ mb: 3 }}>
-                            No GitHub repository linked to this project.
-                        </Typography>
-                    )}
-
-                    {canManageProject && (
-                        <>
-                            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
-                            <Box component="form" onSubmit={handleUpdateGithubRepo}>
-                                <Typography variant="h6" gutterBottom color="white">Update GitHub Repository</Typography>
-                                <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={12} md={5}>
-                                        <TextField
-                                            label="Repository Owner"
-                                            variant="outlined"
-                                            fullWidth
-                                            value={githubOwner}
-                                            onChange={(e) => setGithubOwner(e.target.value)}
-                                            placeholder="e.g., octocat"
-                                            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                            InputProps={{
-                                                sx: {
-                                                    color: 'white',
-                                                    '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'rgba(255,255,255,0.23)'
-                                                    },
-                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'rgba(255,255,255,0.5)'
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={5}>
-                                        <TextField
-                                            label="Repository Name"
-                                            variant="outlined"
-                                            fullWidth
-                                            value={githubRepo}
-                                            onChange={(e) => setGithubRepo(e.target.value)}
-                                            placeholder="e.g., hello-world"
-                                            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                            InputProps={{
-                                                sx: {
-                                                    color: 'white',
-                                                    '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'rgba(255,255,255,0.23)'
-                                                    },
-                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'rgba(255,255,255,0.5)'
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={2}>
-                                        <Button
-                                            type="submit"
-                                            variant="contained"
-                                            color="primary"
-                                            disabled={!githubOwner || !githubRepo}
-                                            fullWidth
-                                            startIcon={<UpdateIcon />}
-                                        >
-                                            Update
-                                        </Button>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-                        </>
-                    )}
-
-                    {project.githubRepo && project.githubRepo.url && (
-                        <>
-                            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
-                            <Typography variant="h6" gutterBottom color="white">GitHub Integration</Typography>
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                <Button
-                                    component={Link}
-                                    to={`/projects/${id}/pulls`}
-                                    variant="outlined"
-                                    startIcon={<MergeTypeIcon />}
-                                    sx={{
-                                        color: 'white',
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                        '&:hover': {
-                                            borderColor: 'white',
-                                            bgcolor: 'rgba(255,255,255,0.08)'
-                                        }
-                                    }}
-                                >
-                                    View Pull Requests
-                                </Button>
-                                <Button
-                                    component={Link}
-                                    to={`/projects/${id}/repository`}
-                                    variant="outlined"
-                                    startIcon={<CodeIcon />}
-                                    sx={{
-                                        color: 'white',
-                                        borderColor: 'rgba(255,255,255,0.3)',
-                                        '&:hover': {
-                                            borderColor: 'white',
-                                            bgcolor: 'rgba(255,255,255,0.08)'
-                                        }
-                                    }}
-                                >
-                                    Browse Repository Files
-                                </Button>
-                            </Stack>
-                        </>
-                    )}
+                    }
+                    sx={{ borderBottom: '1px solid rgba(255,255,255,0.12)', py: { xs: 1.5, md: 2 } }}
+                />
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                    <Button
+                        component={Link}
+                        to={`/projects/${project._id}/repository`}
+                        variant="contained"
+                        color="primary"
+                        startIcon={<CodeIcon />}
+                        sx={{
+                            width: { xs: '100%', md: 'auto' },
+                            py: { xs: 1.2, md: 1 }
+                        }}
+                    >
+                        Browse Repository
+                    </Button>
                 </CardContent>
             </Card>
 
