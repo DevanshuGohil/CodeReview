@@ -63,7 +63,7 @@ const ProjectList = () => {
     const { showSuccess, showError } = useSnackbar();
 
     // Check if user is a manager (can delete projects)
-    const canManageProject = currentUser?.role === 'manager' || currentUser?.role === 'admin';
+    const canManageProject = currentUser?.role === 'manager';
 
     const fetchProjects = async () => {
         try {
@@ -104,7 +104,7 @@ const ProjectList = () => {
         try {
             // Check if current user has permission to delete
             if (!canManageProject) {
-                showError('Only managers and administrators can delete projects');
+                showError('Only managers can delete projects');
                 return;
             }
 

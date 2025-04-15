@@ -35,7 +35,7 @@ const ProjectForm = () => {
 
     // Check if user has permission to create projects
     useEffect(() => {
-        if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+        if (currentUser && currentUser.role !== 'manager') {
             setError('You do not have permission to create projects. Only managers can create projects.');
             // Redirect after a short delay
             const timer = setTimeout(() => {
@@ -72,7 +72,7 @@ const ProjectForm = () => {
         e.preventDefault();
 
         // Double-check permissions before submission
-        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+        if (currentUser.role !== 'manager') {
             setError('You do not have permission to create projects.');
             return;
         }
@@ -136,7 +136,7 @@ const ProjectForm = () => {
     };
 
     // If user doesn't have permission, show restricted message
-    if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+    if (currentUser && currentUser.role !== 'manager') {
         return (
             <Container maxWidth="md" sx={{ mt: 8, textAlign: 'center' }}>
                 <Alert severity="error" sx={{ mb: 3 }}>

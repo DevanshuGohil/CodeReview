@@ -147,7 +147,7 @@ const ManagerRoute = ({ children }) => {
     return <Navigate to="/reset-password" replace />;
   }
 
-  if (currentUser?.role !== 'manager' && currentUser?.role !== 'admin') {
+  if (currentUser?.role !== 'manager') {
     return (
       <Box sx={{ mt: 4, p: 3, textAlign: 'center' }}>
         <Alert severity="error" sx={{ mb: 3 }}>
