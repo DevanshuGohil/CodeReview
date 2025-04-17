@@ -23,7 +23,10 @@ import {
     MenuItem,
     Stack,
     TextField,
-    TableSortLabel
+    TableSortLabel,
+    Grid,
+    InputAdornment,
+    CircularProgress
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -34,7 +37,17 @@ import {
     Upload as UploadIcon,
     Search as SearchIcon,
     KeyboardArrowLeft as KeyboardArrowLeftIcon,
-    KeyboardArrowRight as KeyboardArrowRightIcon
+    KeyboardArrowRight as KeyboardArrowRightIcon,
+    Download as DownloadIcon,
+    Info as InfoIcon,
+    Description as DescriptionIcon,
+    AttachFile as AttachFileIcon,
+    VpnKey as VpnKeyIcon,
+    Close as CloseIcon,
+    CheckCircle as CheckCircleIcon,
+    Warning as WarningIcon,
+    Error as ErrorIcon,
+    CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import api from '../../axiosConfig';
 import { useSnackbar } from '../../components/common/SnackbarProvider';
@@ -788,158 +801,317 @@ const MemberList = () => {
                 maxWidth="sm"
                 fullWidth
                 PaperProps={{
-                    sx: { bgcolor: '#1e1e1e', color: 'white' }
+                    sx: {
+                        bgcolor: '#1e1e1e',
+                        color: 'white',
+                        borderRadius: 2,
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                    }
                 }}
             >
-                <DialogTitle sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    Import Users from CSV
-                </DialogTitle>
-                <DialogContent sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
-                        Upload a CSV file with user data. The file should have headers: firstName, lastName, email, username, role
+                <DialogTitle sx={{
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    px: 3,
+                    py: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5
+                }}>
+                    <UploadIcon sx={{ color: '#4caf50' }} />
+                    <Typography variant="h6" component="span">
+                        Import Users from CSV
                     </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ p: 3 }}>
+                    <Box sx={{ mb: 3, p: 0 }}>
+                        <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <InfoIcon sx={{ fontSize: 18, color: '#2196f3' }} />
+                            Upload a CSV file with user data containing the fields shown below.
+                        </Typography>
+                    </Box>
 
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <input
-                            accept=".csv"
-                            type="file"
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }}
-                            id="csv-file-input"
-                        />
-                        <label htmlFor="csv-file-input">
+                    <Box sx={{
+                        mb: 3,
+                        p: 2.5,
+                        bgcolor: 'rgba(76, 175, 80, 0.08)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(76, 175, 80, 0.2)'
+                    }}>
+                        <Typography variant="subtitle2" sx={{
+                            mb: 1.5,
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                        }}>
+                            <DescriptionIcon sx={{ fontSize: 20, color: '#4caf50' }} />
+                            CSV Format Example
+                        </Typography>
+                        <Box sx={{
+                            p: 1.5,
+                            bgcolor: 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: 1,
+                            overflowX: 'auto'
+                        }}>
+                            <Typography variant="body2" sx={{
+                                fontFamily: 'monospace',
+                                fontSize: '13px',
+                                color: 'rgba(255, 255, 255, 0.85)',
+                                lineHeight: 1.7
+                            }}>
+                                firstName,lastName,email,username,role<br />
+                                John,Doe,john.doe@example.com,johndoe,admin<br />
+                                Jane,Smith,jane.smith@example.com,janesmith,manager<br />
+                                Bob,Johnson,bob.johnson@example.com,bobjohnson,developer
+                            </Typography>
+                        </Box>
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                             <Button
-                                variant="outlined"
-                                component="span"
-                                startIcon={<UploadIcon />}
-                                fullWidth
+                                size="small"
+                                component="a"
+                                href="/sample_users.csv"
+                                download
+                                startIcon={<DownloadIcon />}
                                 sx={{
-                                    color: 'white',
-                                    borderColor: 'rgba(255, 255, 255, 0.23)',
-                                    '&:hover': { borderColor: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' }
+                                    color: '#4caf50',
+                                    textTransform: 'none',
+                                    fontSize: '0.875rem',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(76, 175, 80, 0.12)',
+                                    }
                                 }}
                             >
-                                {importData.csvFile ? importData.csvFile.name : 'Choose CSV File'}
+                                Download Sample CSV
                             </Button>
-                        </label>
-                    </FormControl>
+                        </Box>
+                    </Box>
 
-                    <Typography variant="body2" sx={{ mt: 2, mb: 1, color: 'rgba(255, 255, 255, 0.9)' }}>
-                        Default Passwords for Imported Users
-                    </Typography>
+                    <Box sx={{ mt: 3, mb: 4 }}>
+                        <Typography variant="subtitle2" sx={{
+                            mb: 1.5,
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                        }}>
+                            <AttachFileIcon sx={{ fontSize: 20, color: '#2196f3' }} />
+                            Select CSV File
+                        </Typography>
+                        <FormControl fullWidth>
+                            <input
+                                accept=".csv"
+                                type="file"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                                id="csv-file-input"
+                            />
+                            <label htmlFor="csv-file-input">
+                                <Button
+                                    variant="outlined"
+                                    component="span"
+                                    startIcon={<UploadIcon />}
+                                    fullWidth
+                                    sx={{
+                                        color: 'white',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                        borderRadius: 1.5,
+                                        py: 1.5,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                        '&:hover': {
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255, 255, 255, 0.05)'
+                                        }
+                                    }}
+                                >
+                                    {importData.csvFile ? importData.csvFile.name : 'Choose CSV File'}
+                                </Button>
+                            </label>
+                        </FormControl>
+                    </Box>
 
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <TextField
-                            name="adminPassword"
-                            label="Admin Password"
-                            value={importData.adminPassword}
-                            onChange={handleImportInputChange}
-                            fullWidth
-                            margin="normal"
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            InputProps={{
-                                sx: {
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.23)'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)'
-                                    }
-                                }
-                            }}
-                        />
-                    </FormControl>
+                    <Box sx={{ mt: 2, mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{
+                            mb: 1.5,
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                        }}>
+                            <VpnKeyIcon sx={{ fontSize: 20, color: '#ff9800' }} />
+                            Default Passwords for Imported Users
+                        </Typography>
+                    </Box>
 
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <TextField
-                            name="managerPassword"
-                            label="Manager Password"
-                            value={importData.managerPassword}
-                            onChange={handleImportInputChange}
-                            fullWidth
-                            margin="normal"
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            InputProps={{
-                                sx: {
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.23)'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)'
-                                    }
-                                }
-                            }}
-                        />
-                    </FormControl>
-
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <TextField
-                            name="developerPassword"
-                            label="Developer Password"
-                            value={importData.developerPassword}
-                            onChange={handleImportInputChange}
-                            fullWidth
-                            margin="normal"
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            InputProps={{
-                                sx: {
-                                    color: 'white',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.23)'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.5)'
-                                    }
-                                }
-                            }}
-                        />
-                    </FormControl>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={4}>
+                            <FormControl fullWidth variant="outlined">
+                                <TextField
+                                    name="adminPassword"
+                                    label="Admin Password"
+                                    value={importData.adminPassword}
+                                    onChange={handleImportInputChange}
+                                    type="password"
+                                    fullWidth
+                                    variant="outlined"
+                                    size="small"
+                                    InputLabelProps={{
+                                        sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <AdminIcon fontSize="small" sx={{ color: '#9c27b0' }} />
+                                            </InputAdornment>
+                                        ),
+                                        sx: {
+                                            color: 'white',
+                                            borderRadius: 1.5,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.23)'
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.5)'
+                                            }
+                                        }
+                                    }}
+                                />
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                            <FormControl fullWidth variant="outlined">
+                                <TextField
+                                    name="managerPassword"
+                                    label="Manager Password"
+                                    value={importData.managerPassword}
+                                    onChange={handleImportInputChange}
+                                    type="password"
+                                    fullWidth
+                                    variant="outlined"
+                                    size="small"
+                                    InputLabelProps={{
+                                        sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <ManagerIcon fontSize="small" sx={{ color: '#2196f3' }} />
+                                            </InputAdornment>
+                                        ),
+                                        sx: {
+                                            color: 'white',
+                                            borderRadius: 1.5,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.23)'
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.5)'
+                                            }
+                                        }
+                                    }}
+                                />
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                            <FormControl fullWidth variant="outlined">
+                                <TextField
+                                    name="developerPassword"
+                                    label="Developer Password"
+                                    value={importData.developerPassword}
+                                    onChange={handleImportInputChange}
+                                    type="password"
+                                    fullWidth
+                                    variant="outlined"
+                                    size="small"
+                                    InputLabelProps={{
+                                        sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <EngineerIcon fontSize="small" sx={{ color: '#757575' }} />
+                                            </InputAdornment>
+                                        ),
+                                        sx: {
+                                            color: 'white',
+                                            borderRadius: 1.5,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.23)'
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255, 255, 255, 0.5)'
+                                            }
+                                        }
+                                    }}
+                                />
+                            </FormControl>
+                        </Grid>
+                    </Grid>
 
                     {importResult && (
-                        <Box sx={{ mb: 2, mt: 3 }}>
+                        <Box sx={{ mb: 0, mt: 4 }}>
                             <Alert
                                 severity={importResult.errors.length === 0 ? "success" : "warning"}
-                                sx={{ bgcolor: importResult.errors.length === 0 ? 'rgba(46, 125, 50, 0.1)' : 'rgba(237, 108, 2, 0.1)', color: importResult.errors.length === 0 ? '#81c784' : '#ffb74d' }}
+                                variant="outlined"
+                                icon={importResult.errors.length === 0 ? <CheckCircleIcon /> : <WarningIcon />}
+                                sx={{
+                                    bgcolor: importResult.errors.length === 0 ? 'rgba(46, 125, 50, 0.1)' : 'rgba(237, 108, 2, 0.1)',
+                                    color: importResult.errors.length === 0 ? '#81c784' : '#ffb74d',
+                                    borderRadius: 2
+                                }}
                             >
                                 {importResult.success} of {importResult.total} users imported successfully
                             </Alert>
 
                             {importResult.errors.length > 0 && (
-                                <Box sx={{ mt: 1 }}>
-                                    <Typography variant="body2" sx={{ color: '#f44336', mb: 1 }}>
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" sx={{ color: '#f44336', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ErrorIcon fontSize="small" />
                                         Failed to import {importResult.errors.length} users:
                                     </Typography>
-                                    <ul style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, paddingLeft: '1.5rem' }}>
-                                        {importResult.errors.map((error, index) => (
-                                            <li key={index}>{error}</li>
-                                        ))}
-                                    </ul>
+                                    <Box sx={{
+                                        ml: 2,
+                                        borderLeft: '2px solid rgba(244, 67, 54, 0.5)',
+                                        pl: 2
+                                    }}>
+                                        <ul style={{ color: 'rgba(255, 255, 255, 0.7)', margin: '4px 0', paddingLeft: '1.5rem' }}>
+                                            {importResult.errors.map((error, index) => (
+                                                <li key={index}>{error}</li>
+                                            ))}
+                                        </ul>
+                                    </Box>
                                 </Box>
                             )}
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)', justifyContent: 'space-between' }}>
                     <Button
                         onClick={() => setOpenImportModal(false)}
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
                         disabled={processing}
+                        startIcon={<CloseIcon />}
+                        sx={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' }
+                        }}
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleImportSubmit}
                         variant="contained"
-                        sx={{ bgcolor: '#4caf50' }}
                         disabled={!importData.csvFile || processing}
+                        startIcon={processing ? <CircularProgress size={16} /> : <CloudUploadIcon />}
+                        sx={{
+                            bgcolor: '#4caf50',
+                            borderRadius: 1.5,
+                            px: 3,
+                            '&:hover': { bgcolor: '#43a047' },
+                            '&.Mui-disabled': {
+                                bgcolor: 'rgba(76, 175, 80, 0.3)',
+                                color: 'rgba(255, 255, 255, 0.4)'
+                            }
+                        }}
                     >
                         {processing ? 'Importing...' : 'Import Users'}
                     </Button>
